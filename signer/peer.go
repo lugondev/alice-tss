@@ -1,18 +1,15 @@
 package signer
 
 import (
-	"context"
-	"encoding/hex"
-	"fmt"
-	"github.com/libp2p/go-libp2p/core"
-	"github.com/multiformats/go-multiaddr"
-	"log"
-
 	"alice-tss/config"
 	"alice-tss/peer"
+	"context"
+	"fmt"
 	gorpc "github.com/libp2p/go-libp2p-gorpc"
+	"github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/host"
 	libp2pPeer "github.com/libp2p/go-libp2p/core/peer"
+	"github.com/multiformats/go-multiaddr"
 )
 
 type PeerArgs struct {
@@ -33,14 +30,11 @@ type PingReply struct {
 }
 type PingService struct {
 	service *Service
-	pm      *peer.PeerManager
+	pm      *peer.P2PManager
 	config  *config.SignerConfig
 }
 
-func (t *PingService) Ping(_ context.Context, argType PingArgs, replyType *PingReply) error {
-	log.Println("Received a Ping call:", hex.EncodeToString(argType.Data))
-	replyData := []byte("reply for ID " + argType.ID + " with data:" + hex.EncodeToString(argType.Data))
-	replyType.Data = replyData
+func (t *PingService) Process(_ context.Context, argType PingArgs, replyType *PingReply) error {
 	replyType.Key = argType.ID
 
 	t.pm.EnsureAllConnected()
@@ -48,10 +42,7 @@ func (t *PingService) Ping(_ context.Context, argType PingArgs, replyType *PingR
 	return nil
 }
 
-func (t *PingService) PrepareMsg(_ context.Context, argType PingArgs, replyType *PingReply) error {
-	log.Println("PrepareMsg called:", hex.EncodeToString(argType.Data))
-	replyData := []byte("reply for key " + argType.ID + " with data:" + hex.EncodeToString(argType.Data))
-	replyType.Data = replyData
+func (t *PingService) PrepareDataToSign(_ context.Context, argType PingArgs, replyType *PingReply) error {
 	replyType.Key = argType.ID
 
 	if err := t.service.CreateSigner(t.pm, t.config, string(argType.Data)); err != nil {

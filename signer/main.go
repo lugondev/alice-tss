@@ -2,19 +2,14 @@ package signer
 
 import (
 	"fmt"
-	"net/http"
-	"os"
-	"strconv"
-	"time"
-
 	"github.com/dgraph-io/badger"
 	"github.com/getamis/sirius/log"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/gorilla/mux"
 	gorpc "github.com/libp2p/go-libp2p-gorpc"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
 
 	"alice-tss/peer"
 	"alice-tss/utils"
@@ -23,6 +18,7 @@ import (
 var configFile string
 var keystoreFile string
 var password string
+var port int
 
 var Cmd = &cobra.Command{
 	Use:   "signer",
@@ -75,11 +71,6 @@ var Cmd = &cobra.Command{
 			panic(err)
 		}
 
-		e := echo.New()
-		e.HideBanner = true
-		e.HidePort = true
-		e.Pre(middleware.RemoveTrailingSlash())
-
 		service, err := NewService(c, pm, badgerFsm)
 
 		rpcHost := gorpc.NewServer(host, peer.ProtocolId)
@@ -102,85 +93,10 @@ var Cmd = &cobra.Command{
 			service.Handle(s)
 		})
 
-		e.POST("/ping", func(eCtx echo.Context) error {
-			for _, peerId := range pm.PeerIDs() {
-				peerAddrTarget := pm.Peers()[peerId]
-				go func() {
-					fmt.Println("send:", peerAddrTarget)
-					reply, err := SentToPeer(host, PeerArgs{
-						peerAddrTarget,
-						"PingService",
-						"Ping",
-						PingArgs{
-							ID:   host.ID().String(),
-							Data: []byte("msg"),
-						},
-						peer.ProtocolId,
-					})
-
-					if err != nil {
-						fmt.Println("send err", err)
-						return
-					}
-					fmt.Println("reply:", reply)
-					service.Process()
-				}()
-			}
-
-			return eCtx.JSON(http.StatusOK, map[string]interface{}{
-				"message": "Ping",
-				"data":    "",
-			})
-		})
-
-		e.POST("/prepare", func(eCtx echo.Context) error {
-			msg := eCtx.QueryParam("msg")
-			if msg == "" {
-				msg = "default_message"
-			}
-			if err := service.CreateSigner(pm, c, msg); err != nil {
-				fmt.Println("CreateSigner err", err)
-				return eCtx.JSON(http.StatusBadRequest, map[string]interface{}{
-					"message": "CreateSigner err",
-					"data":    err.Error(),
-				})
-			}
-			for _, peerId := range pm.PeerIDs() {
-				peerAddrTarget := pm.Peers()[peerId]
-				go func() {
-					fmt.Println("send:", peerAddrTarget)
-					reply, err := SentToPeer(host, PeerArgs{
-						peerAddrTarget,
-						"PingService",
-						"PrepareMsg",
-						PingArgs{
-							ID:   host.ID().String(),
-							Data: []byte(msg),
-						},
-						peer.ProtocolId,
-					})
-
-					if err != nil {
-						fmt.Println("send err", err)
-						return
-					}
-					fmt.Println("reply:", reply)
-				}()
-			}
-
-			return eCtx.JSON(http.StatusOK, map[string]interface{}{
-				"message": "Ping",
-				"data":    "",
-			})
-		})
-
-		if err := e.StartServer(&http.Server{
-			Addr:         ":" + strconv.FormatInt(c.Port-1000, 10),
-			ReadTimeout:  3 * time.Second,
-			WriteTimeout: 3 * time.Second,
-		}); err != nil {
-			return err
+		if err := InitRouter(port, mux.NewRouter(), pm, service, host, c); err != nil {
+			log.Crit("init router", "err", err)
 		}
+
 		return nil
 	},
 }
@@ -189,6 +105,7 @@ func init() {
 	Cmd.Flags().String("config", "", "signer config file path")
 	Cmd.Flags().String("keystore", "", "keystore file path")
 	Cmd.Flags().String("password", "111111", "password")
+	Cmd.Flags().Int("port", 1234, "port server")
 }
 
 func initService(cmd *cobra.Command) error {
@@ -199,6 +116,7 @@ func initService(cmd *cobra.Command) error {
 	configFile = viper.GetString("config")
 	keystoreFile = viper.GetString("keystore")
 	password = viper.GetString("password")
+	port = viper.GetInt("port")
 
 	return nil
 }

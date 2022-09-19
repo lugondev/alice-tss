@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/ecdsa"
 	cryptoElliptic "crypto/elliptic"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -126,4 +127,11 @@ func ToEcdsaP256(d []byte, strict bool) (*ecdsa.PrivateKey, error) {
 		return nil, errors.New("invalid private key")
 	}
 	return priv, nil
+}
+
+func ToHex(b []byte) string {
+	enc := make([]byte, len(b)*2+2)
+	copy(enc, "0x")
+	hex.Encode(enc[2:], b)
+	return string(enc)
 }

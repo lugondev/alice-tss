@@ -33,11 +33,6 @@ func NewService(config *config.SignerConfig, pm types.PeerManager, badgerFsm *pe
 	}
 	log.Info("Service call")
 
-	//Create newSigner
-	//if err := s.CreateSigner(pm, config, "MsgSign"); err != nil {
-	//	log.Warn("Cannot create a new newSigner", "err", err)
-	//	return nil, err
-	//}
 	return s, nil
 }
 
@@ -124,7 +119,7 @@ func (p *Service) OnStateChanged(oldState types.MainState, newState types.MainSt
 		log.Info("Signer done", "old", oldState.String(), "new", newState.String())
 		result, err := p.signer.GetResult()
 		if err == nil {
-			writeSignerResult(p.pm.SelfID(), result)
+			log.Info("signed", "result", result)
 		} else {
 			log.Warn("Failed to get result from signer", "err", err)
 		}

@@ -13,15 +13,15 @@ import (
 	"alice-tss/utils"
 )
 
-type PeerManager struct {
+type P2PManager struct {
 	id       string
 	host     host.Host
 	protocol protocol.ID
 	peers    map[string]string
 }
 
-func NewPeerManager(id string, host host.Host, protocol protocol.ID) *PeerManager {
-	return &PeerManager{
+func NewPeerManager(id string, host host.Host, protocol protocol.ID) *P2PManager {
+	return &P2PManager{
 		id:       id,
 		host:     host,
 		protocol: protocol,
@@ -29,15 +29,15 @@ func NewPeerManager(id string, host host.Host, protocol protocol.ID) *PeerManage
 	}
 }
 
-func (p *PeerManager) NumPeers() uint32 {
+func (p *P2PManager) NumPeers() uint32 {
 	return uint32(len(p.peers))
 }
 
-func (p *PeerManager) SelfID() string {
+func (p *P2PManager) SelfID() string {
 	return p.id
 }
 
-func (p *PeerManager) PeerIDs() []string {
+func (p *P2PManager) PeerIDs() []string {
 	ids := make([]string, len(p.peers))
 	i := 0
 	for id := range p.peers {
@@ -47,11 +47,11 @@ func (p *PeerManager) PeerIDs() []string {
 	return ids
 }
 
-func (p *PeerManager) Peers() map[string]string {
+func (p *P2PManager) Peers() map[string]string {
 	return p.peers
 }
 
-func (p *PeerManager) MustSend(peerID string, message interface{}) {
+func (p *P2PManager) MustSend(peerID string, message interface{}) {
 	err := send(context.Background(), p.host, p.peers[peerID], message, p.protocol)
 	if err != nil {
 		fmt.Println("MustSend:", err)
@@ -60,7 +60,7 @@ func (p *PeerManager) MustSend(peerID string, message interface{}) {
 }
 
 // EnsureAllConnected connects the host to specified peer and sends the message to it.
-func (p *PeerManager) EnsureAllConnected() {
+func (p *P2PManager) EnsureAllConnected() {
 	var wg sync.WaitGroup
 	fmt.Println("start EnsureAllConnected")
 
@@ -74,7 +74,7 @@ func (p *PeerManager) EnsureAllConnected() {
 }
 
 // SendAllConnected connects the host to specified peer and sends the message to it.
-func (p *PeerManager) SendAllConnected(msg string, id protocol.ID) {
+func (p *P2PManager) SendAllConnected(msg string, id protocol.ID) {
 	fmt.Println("start SendAllConnected")
 
 	for _, peerAddr := range p.peers {
@@ -94,7 +94,7 @@ func (p *PeerManager) SendAllConnected(msg string, id protocol.ID) {
 }
 
 // AddPeers adds peers to peer list.
-func (p *PeerManager) AddPeers(peerPorts []int64) error {
+func (p *P2PManager) AddPeers(peerPorts []int64) error {
 	for _, peerPort := range peerPorts {
 		peerID := utils.GetPeerIDFromPort(peerPort)
 		peerAddr, err := getPeerAddr(peerPort)
