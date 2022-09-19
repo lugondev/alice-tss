@@ -1,0 +1,7 @@
+port: 10002
+rank: 1
+threshold: 3
+peers:
+  - 10001
+  - 10003
+  - 10004

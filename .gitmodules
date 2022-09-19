@@ -1,0 +1,3 @@
+[submodule "alice"]
+	path = alice
+	url = https://github.com/getamis/alice.git
