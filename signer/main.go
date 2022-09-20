@@ -41,14 +41,15 @@ var Cmd = &cobra.Command{
 		}
 
 		// Make a host that listens on the given multiaddress.
-		host, err := peer.MakeBasicHost(c.Port, privateKey)
+		host, pid, err := peer.MakeBasicHost(c.Port, privateKey)
 		if err != nil {
 			log.Crit("Failed to create a basic host", "err", err)
 		}
 
+		log.Info("peer host", "pid", pid)
+
 		// Create a new peer manager.
-		pm := peer.NewPeerManager(utils.GetPeerIDFromPort(c.Port), host, peer.SignerProtocol)
-		err = pm.AddPeers(c.Peers)
+		pm := peer.NewPeerManager(pid.String(), host, peer.SignerProtocol)
 		if err != nil {
 			log.Crit("Failed to add peers", "err", err)
 		}
@@ -67,7 +68,7 @@ var Cmd = &cobra.Command{
 		badgerFsm := peer.NewBadger(badgerDB)
 
 		// setup local mDNS discovery
-		if err := peer.SetupDiscovery(host); err != nil {
+		if err := peer.SetupDiscovery(host, pm); err != nil {
 			panic(err)
 		}
 
@@ -75,9 +76,10 @@ var Cmd = &cobra.Command{
 
 		rpcHost := gorpc.NewServer(host, peer.ProtocolId)
 		svc := PingService{
-			service: service,
-			pm:      pm,
-			config:  c,
+			service:   service,
+			pm:        pm,
+			config:    c,
+			badgerFsm: badgerFsm,
 		}
 
 		if err := rpcHost.Register(&svc); err != nil {
@@ -93,7 +95,7 @@ var Cmd = &cobra.Command{
 			service.Handle(s)
 		})
 
-		if err := InitRouter(port, mux.NewRouter(), pm, service, host, c); err != nil {
+		if err := InitRouter(port, mux.NewRouter(), pm, service, host, c, badgerFsm); err != nil {
 			log.Crit("init router", "err", err)
 		}
 

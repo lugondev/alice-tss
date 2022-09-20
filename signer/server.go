@@ -3,6 +3,7 @@ package signer
 import (
 	"alice-tss/config"
 	"alice-tss/peer"
+	"alice-tss/utils"
 	"errors"
 	"fmt"
 	"github.com/getamis/sirius/log"
@@ -18,6 +19,7 @@ type RpcService struct {
 	service    *Service
 	hostClient host.Host
 	config     *config.SignerConfig
+	badgerFsm  *peer.BadgerFSM
 }
 
 type RpcPreDataArgs struct {
@@ -28,18 +30,28 @@ type RpcProcessArgs struct {
 }
 
 type RpcReply struct {
-	Message string
+	Data interface{}
 }
 
-func (h *RpcService) GetSay(r *http.Request, args *RpcPreDataArgs, reply *RpcReply) error {
-	reply.Message = "Rpc, " + args.Data + "!"
-	fmt.Printf("request: %v\nargs: %v\nreply: %v\n", r, args, reply)
+func (h *RpcService) GetSay(_ *http.Request, args *RpcPreDataArgs, reply *RpcReply) error {
+	reply.Data = "Rpc, " + args.Data + "!"
+	return nil
+}
+
+func (h *RpcService) GetHash(_ *http.Request, args *RpcPreDataArgs, reply *RpcReply) error {
+	log.Info("get hash request", "arg", args.Data)
+	data, err := h.badgerFsm.Get(args.Data)
+	if err != nil {
+		return err
+	}
+	log.Info("get hash", "data", data)
+	reply.Data = data
 	return nil
 }
 
 func (h *RpcService) Process(_ *http.Request, _ *RpcProcessArgs, reply *RpcReply) error {
 	log.Info("RPC server", "process", "called")
-	reply.Message = "Processed"
+	reply.Data = "Processed"
 	for _, peerId := range h.pm.PeerIDs() {
 		peerAddrTarget := h.pm.Peers()[peerId]
 		go func() {
@@ -71,9 +83,16 @@ func (h *RpcService) PrepareDataToSign(_ *http.Request, args *RpcPreDataArgs, re
 	if args.Data == "" {
 		return errors.New("data required")
 	}
-	reply.Message = "data prepared: " + args.Data
+	hash := utils.ToHexHash([]byte(args.Data))
+	reply.Data = map[string]interface{}{
+		"hash": hash,
+		"args": args,
+	}
 	if err := h.service.CreateSigner(h.pm, h.config, args.Data); err != nil {
-		fmt.Println("CreateSigner err", err)
+		log.Error("CreateSigner", "err", err)
+		return err
+	}
+	if err := h.badgerFsm.Set(hash, "1"); err != nil {
 		return err
 	}
 	for _, peerId := range h.pm.PeerIDs() {
@@ -101,7 +120,7 @@ func (h *RpcService) PrepareDataToSign(_ *http.Request, args *RpcPreDataArgs, re
 	return nil
 }
 
-func InitRouter(port int, r *mux.Router, pm *peer.P2PManager, service *Service, hostClient host.Host, c *config.SignerConfig) error {
+func InitRouter(port int, r *mux.Router, pm *peer.P2PManager, service *Service, hostClient host.Host, c *config.SignerConfig, badgerFsm *peer.BadgerFSM) error {
 	rpcServer := rpc.NewServer()
 	rpcServer.RegisterCodec(rpcjson.NewCodec(), "application/json")
 
@@ -110,6 +129,7 @@ func InitRouter(port int, r *mux.Router, pm *peer.P2PManager, service *Service, 
 		service:    service,
 		hostClient: hostClient,
 		config:     c,
+		badgerFsm:  badgerFsm,
 	}, "signer")
 	if err != nil {
 		log.Crit("start rpc service failed", "err", err)

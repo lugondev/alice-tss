@@ -135,3 +135,7 @@ func ToHex(b []byte) string {
 	hex.Encode(enc[2:], b)
 	return string(enc)
 }
+
+func ToHexHash(b []byte) string {
+	return ToHex(crypto.Keccak256(b))
+}

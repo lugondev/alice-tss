@@ -19,33 +19,27 @@ import (
 )
 
 // MakeBasicHost creates a LibP2P host.
-func MakeBasicHost(port int64, privateKey *ecdsa.PrivateKey) (host.Host, error) {
+func MakeBasicHost(port int64, privateKey *ecdsa.PrivateKey) (host.Host, peer.ID, error) {
 	sourceMultiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", port))
 	if err != nil {
-		return nil, err
-	}
-
-	priv, err := generateIdentity(port)
-	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	privP256, _ := utils.ToEcdsaP256(privateKey.D.Bytes(), false)
 	cryptoPriv, _, _ := crypto.ECDSAKeyPairFromKey(privP256)
 	pid, err := peer.IDFromPrivateKey(cryptoPriv)
-	fmt.Println("pid: ", pid)
 
 	opts := []libp2p.Option{
 		libp2p.ListenAddrs(sourceMultiAddr),
-		libp2p.Identity(priv),
+		libp2p.Identity(cryptoPriv),
 	}
 
 	basicHost, err := libp2p.New(opts...)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return basicHost, nil
+	return basicHost, pid, nil
 }
 
 // getPeerAddr gets peer full address from port.

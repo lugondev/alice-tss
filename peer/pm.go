@@ -3,14 +3,13 @@ package peer
 import (
 	"context"
 	"fmt"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"sync"
 	"time"
 
 	"github.com/getamis/sirius/log"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/protocol"
-
-	"alice-tss/utils"
 )
 
 type P2PManager struct {
@@ -21,6 +20,7 @@ type P2PManager struct {
 }
 
 func NewPeerManager(id string, host host.Host, protocol protocol.ID) *P2PManager {
+	log.Info("Peer manager", "id", id, "protocol", protocol)
 	return &P2PManager{
 		id:       id,
 		host:     host,
@@ -41,6 +41,7 @@ func (p *P2PManager) PeerIDs() []string {
 	ids := make([]string, len(p.peers))
 	i := 0
 	for id := range p.peers {
+		fmt.Println("p.peers:", id)
 		ids[i] = id
 		i++
 	}
@@ -52,6 +53,7 @@ func (p *P2PManager) Peers() map[string]string {
 }
 
 func (p *P2PManager) MustSend(peerID string, message interface{}) {
+	log.Info("Pm must send", "peerID", peerID, "message", message)
 	err := send(context.Background(), p.host, p.peers[peerID], message, p.protocol)
 	if err != nil {
 		fmt.Println("MustSend:", err)
@@ -95,16 +97,25 @@ func (p *P2PManager) SendAllConnected(msg string, id protocol.ID) {
 
 // AddPeers adds peers to peer list.
 func (p *P2PManager) AddPeers(peerPorts []int64) error {
-	for _, peerPort := range peerPorts {
-		peerID := utils.GetPeerIDFromPort(peerPort)
-		peerAddr, err := getPeerAddr(peerPort)
-		if err != nil {
-			log.Warn("Cannot get peer address", "peerPort", peerPort, "peerID", peerID, "err", err)
-			return err
-		}
-		p.peers[peerID] = peerAddr
-	}
+	//for _, peerPort := range peerPorts {
+	//	peerID := utils.GetPeerIDFromPort(peerPort)
+	//	peerAddr, err := getPeerAddr(peerPort)
+	//	if err != nil {
+	//		log.Warn("Cannot get peer address", "peerPort", peerPort, "peerID", peerID, "err", err)
+	//		return err
+	//	}
+	//	log.Info("peer", "addr", peerAddr)
+	//	p.peers[peerID] = peerAddr
+	//}
 	return nil
+}
+
+// AddPeerID adds peerID to peer list.
+func (p *P2PManager) AddPeerID(peerID peer.ID, addr string) {
+	peerAddr := fmt.Sprintf("%s/p2p/%s", addr, peerID)
+	log.Info("Peer added", "addr", peerAddr)
+	p.peers[peerID.String()] = peerAddr
+	return
 }
 
 func connectToPeer(host host.Host, peerAddr string, wg *sync.WaitGroup) {

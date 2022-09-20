@@ -3,8 +3,10 @@ package signer
 import (
 	"alice-tss/config"
 	"alice-tss/peer"
+	"alice-tss/utils"
 	"context"
 	"fmt"
+	"github.com/getamis/sirius/log"
 	gorpc "github.com/libp2p/go-libp2p-gorpc"
 	"github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -29,9 +31,10 @@ type PingReply struct {
 	Data []byte
 }
 type PingService struct {
-	service *Service
-	pm      *peer.P2PManager
-	config  *config.SignerConfig
+	service   *Service
+	pm        *peer.P2PManager
+	config    *config.SignerConfig
+	badgerFsm *peer.BadgerFSM
 }
 
 func (t *PingService) Process(_ context.Context, argType PingArgs, replyType *PingReply) error {
@@ -43,10 +46,17 @@ func (t *PingService) Process(_ context.Context, argType PingArgs, replyType *Pi
 }
 
 func (t *PingService) PrepareDataToSign(_ context.Context, argType PingArgs, replyType *PingReply) error {
+	hash := utils.ToHexHash(argType.Data)
+	log.Info("PrepareDataToSign", "id", argType.ID, "data", string(argType.Data), "hash", hash)
 	replyType.Key = argType.ID
+	replyType.Data = []byte(hash)
 
 	if err := t.service.CreateSigner(t.pm, t.config, string(argType.Data)); err != nil {
 		fmt.Println("CreateSigner err", err)
+		return err
+	}
+
+	if err := t.badgerFsm.Set(hash, "1"); err != nil {
 		return err
 	}
 	return nil
