@@ -2,14 +2,15 @@ package signer
 
 import (
 	"fmt"
+	"github.com/libp2p/go-libp2p/core/network"
+	"os"
+
 	"github.com/dgraph-io/badger"
 	"github.com/getamis/sirius/log"
 	"github.com/gorilla/mux"
 	gorpc "github.com/libp2p/go-libp2p-gorpc"
-	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
 
 	"alice-tss/peer"
 	"alice-tss/utils"
@@ -57,7 +58,7 @@ var Cmd = &cobra.Command{
 		badgerOpt := badger.DefaultOptions(c.BadgerDir)
 		badgerDB, err := badger.Open(badgerOpt)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		defer func() {
@@ -73,6 +74,16 @@ var Cmd = &cobra.Command{
 		}
 
 		service, err := NewService(c, pm, badgerFsm)
+		if err != nil {
+			log.Error("NewService", "err", err)
+			return err
+		}
+
+		// Set a stream handler on the host.
+		host.SetStreamHandler(peer.SignerProtocol, func(s network.Stream) {
+			log.Info("Stream handler base", "protocol", s.Protocol(), "peer", s.Conn().LocalPeer())
+			service.Handle(s)
+		})
 
 		rpcHost := gorpc.NewServer(host, peer.ProtocolId)
 		svc := PingService{
@@ -89,13 +100,7 @@ var Cmd = &cobra.Command{
 			log.Crit("Failed to new service", "err", err)
 		}
 
-		// Set a stream handler on the host.
-		host.SetStreamHandler(peer.SignerProtocol, func(s network.Stream) {
-			log.Info("Stream", "protocol", s.Protocol(), "peer", s.Conn().LocalPeer())
-			service.Handle(s)
-		})
-
-		if err := InitRouter(port, mux.NewRouter(), pm, service, host, c, badgerFsm); err != nil {
+		if err := InitRouter(port, mux.NewRouter(), pm, service, c, badgerFsm); err != nil {
 			log.Crit("init router", "err", err)
 		}
 

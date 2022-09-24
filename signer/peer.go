@@ -12,6 +12,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	libp2pPeer "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
+	"sync"
+	"time"
 )
 
 type PeerArgs struct {
@@ -51,7 +53,7 @@ func (t *PingService) PrepareDataToSign(_ context.Context, argType PingArgs, rep
 	replyType.Key = argType.ID
 	replyType.Data = []byte(hash)
 
-	if err := t.service.CreateSigner(t.pm, t.config, string(argType.Data)); err != nil {
+	if err := t.service.CreateSigner(string(argType.Data)); err != nil {
 		fmt.Println("CreateSigner err", err)
 		return err
 	}
@@ -62,7 +64,41 @@ func (t *PingService) PrepareDataToSign(_ context.Context, argType PingArgs, rep
 	return nil
 }
 
-func SentToPeer(client host.Host, data PeerArgs) (*PingReply, error) {
+func (t *PingService) Test(_ context.Context, argType PingArgs, replyType *PingReply) error {
+	hash := utils.ToHexHash(argType.Data)
+	log.Info("PrepareDataToSign", "id", argType.ID, "data", string(argType.Data), "hash", hash)
+	replyType.Key = argType.ID
+	replyType.Data = []byte(hash)
+
+	if err := t.badgerFsm.Set(hash, "1"); err != nil {
+		return err
+	}
+
+	//service, err := NewService(t.config, t.pm, t.badgerFsm)
+	//if err != nil {
+	//	log.Error("NewService", "err", err)
+	//	return err
+	//}
+
+	//t.pm.Host.SetStreamHandler(peer.SignerProtocol, func(s network.Stream) {
+	//	log.Info("Stream handler from other peer", "protocol", s.Protocol(), "peer", s.Conn().LocalPeer())
+	//	if service.signer != nil {
+	//		service.Handle(s)
+	//	}
+	//})
+
+	if err := t.service.CreateSigner(string(argType.Data)); err != nil {
+		fmt.Println("CreateSigner err", err)
+		return err
+	} else {
+		log.Info("Stream Test", "service process", "called")
+		go t.service.Process()
+	}
+
+	return nil
+}
+
+func MsgToPeer(client host.Host, data PeerArgs) (*PingReply, error) {
 	ma, err := multiaddr.NewMultiaddr(data.PeerAddrTarget)
 	if err != nil {
 		fmt.Println("New Multi addr:", err)
@@ -88,4 +124,20 @@ func SentToPeer(client host.Host, data PeerArgs) (*PingReply, error) {
 		return nil, err
 	}
 	return &reply, nil
+}
+
+func SendToPeer(client host.Host, data PeerArgs, wg *sync.WaitGroup) (*PingReply, error) {
+	defer wg.Done()
+
+	for {
+		// Connect the host to the peer.
+		reply, err := MsgToPeer(client, data)
+		if err != nil {
+			log.Warn("Failed to sent to peer", "to", client.ID().String(), "err", err)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		log.Debug("Successfully connect to peer")
+		return reply, nil
+	}
 }

@@ -129,43 +129,6 @@ func send(ctx context.Context, host host.Host, target string, data interface{}, 
 	return nil
 }
 
-// send message to specified peer.
-func sendMsg(ctx context.Context, host host.Host, target string, msg []byte, protocol protocol.ID) error {
-	// Turn the destination into a multiaddr.
-	maddr, err := multiaddr.NewMultiaddr(target)
-	if err != nil {
-		log.Warn("Cannot parse the target address", "target", target, "err", err)
-		return err
-	}
-
-	// Extract the peer ID from the multiaddr.
-	info, err := peer.AddrInfoFromP2pAddr(maddr)
-	if err != nil {
-		log.Warn("Cannot parse addr", "addr", maddr, "err", err)
-		return err
-	}
-
-	s, err := host.NewStream(ctx, info.ID, protocol)
-	if err != nil {
-		log.Warn("Cannot create a new stream", "from", host.ID(), "to", target, "err", err)
-		return err
-	}
-
-	_, err = s.Write(msg)
-	if err != nil {
-		log.Warn("Cannot write message to IO", "err", err)
-		return err
-	}
-	err = s.Close()
-	if err != nil {
-		log.Warn("Cannot close the stream", "err", err)
-		return err
-	}
-
-	log.Info("Sent message", "peer", target)
-	return nil
-}
-
 // connect the host to the specified peer.
 func connect(ctx context.Context, host host.Host, target string) error {
 	// Turn the destination into a multiaddr.

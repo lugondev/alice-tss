@@ -31,6 +31,7 @@ func NewService(config *config.SignerConfig, pm types.PeerManager, badgerFsm *pe
 		fsm:    badgerFsm,
 		done:   make(chan struct{}),
 	}
+
 	log.Info("Service call")
 
 	return s, nil
@@ -45,7 +46,7 @@ func (p *Service) closeDone() {
 	}
 }
 
-func (p *Service) CreateSigner(pm types.PeerManager, config *config.SignerConfig, msg string) error {
+func (p *Service) CreateSigner(msg string) error {
 	// For simplicity, we use Paillier algorithm in signer.
 	newPaillier, err := paillier.NewPaillier(2048)
 	if err != nil {
@@ -53,7 +54,7 @@ func (p *Service) CreateSigner(pm types.PeerManager, config *config.SignerConfig
 		return err
 	}
 
-	dkgResult, err := utils.ConvertDKGResult(config.Pubkey, config.Share, config.BKs)
+	dkgResult, err := utils.ConvertDKGResult(p.config.Pubkey, p.config.Share, p.config.BKs)
 	if err != nil {
 		log.Warn("Cannot get DKG result", "err", err)
 		return err
@@ -61,13 +62,14 @@ func (p *Service) CreateSigner(pm types.PeerManager, config *config.SignerConfig
 
 	log.Info("Signer created", "msg", msg)
 	hashMessage := utils.EthSignMessage([]byte(msg))
-	newSigner, err := signer.NewSigner(pm, dkgResult.PublicKey, newPaillier, dkgResult.Share, dkgResult.Bks, hashMessage, p)
+	newSigner, err := signer.NewSigner(p.pm, dkgResult.PublicKey, newPaillier, dkgResult.Share, dkgResult.Bks, hashMessage, p)
 	if err != nil {
 		log.Warn("Cannot create a new signer", "err", err)
-		return err
+		//return err
+	} else {
+		p.signer = newSigner
 	}
 
-	p.signer = newSigner
 	return nil
 }
 
@@ -89,7 +91,7 @@ func (p *Service) Handle(s network.Stream) {
 		return
 	}
 
-	log.Info("Received request", "from", s.Conn().RemotePeer(), "data", data.String())
+	log.Info("Received request", "from", s.Conn().RemotePeer())
 	err = p.signer.AddMessage(data)
 	if err != nil {
 		log.Warn("Cannot add message to signer", "err", err)

@@ -2,7 +2,9 @@ package peer
 
 import (
 	"context"
+	"fmt"
 	"github.com/getamis/sirius/log"
+	"github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/host"
 	p2pPeer "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
@@ -47,4 +49,8 @@ func SetupDiscovery(h host.Host, pm *P2PManager) error {
 		pm: pm,
 	})
 	return s.Start()
+}
+
+func GetProtocol(id string) core.ProtocolID {
+	return core.ProtocolID(fmt.Sprintf("/%s/1.0.0", id))
 }
