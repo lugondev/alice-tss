@@ -12,7 +12,6 @@ This program demonstrates a simple TSS by using [go-libp2p](https://github.com/l
 Beyond all commands, there are some common inputs.
 
 config.yaml
-
 ```yaml
 port: 10001
 rpc: 1234
@@ -244,17 +243,38 @@ After the binary was built, open three terminals.
 
 First, run 3 hosts on different terminals. Each node will need to consume a config file (e.g `dkg/id-10001-input.yaml`) by using `--config` or `-c` to specify the path of the config file. These 3 nodes will try to connect to each other. Once it connects to a peer, it will send the peer message out. After the peer messages are fully transmitted, each node will try to get the result and write it to the respective result file.
 
-On node A, 
+On node A,
+id-10001-input.yaml
+```yaml
+port: 10001
+rpc: 1234
+
+badger-dir: "./node.test/badger1"
+```
 ```sh
 > ./cmd/tss start --config ./cmd/id-10001-input.yaml --keystore ./node.test/keystore/1
 ```
 
 On node B,
+id-10002-input.yaml
+```yaml
+port: 10002
+rpc: 1235
+
+badger-dir: "./node.test/badger2"
+```
 ```sh
 > ./cmd/tss start --config ./cmd/id-10002-input.yaml --keystore ./node.test/keystore/2
 ```
 
 On node C,
+id-10003-input.yaml
+```yaml
+port: 10003
+rpc: 1236
+
+badger-dir: "./node.test/badger3"
+```
 ```sh
 > ./cmd/tss start --config ./cmd/id-10003-input.yaml --keystore ./node.test/keystore/3
 ```
