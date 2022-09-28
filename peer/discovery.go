@@ -12,9 +12,10 @@ import (
 
 const (
 	SignerProtocol = "/signer/1.0.0"
+	DKGProtocol    = "/dkg/1.0.0"
 	ProtocolId     = "/p2p/1.0.0"
 	// DiscoveryServiceTag is used in our mDNS advertisements to discover other chat peers.
-	DiscoveryServiceTag = "pub-sub-discovery-bam-bridge"
+	DiscoveryServiceTag = "discovery-wallet-as-a-service"
 )
 
 // discoveryNotifee gets notified when we find a new peer via mDNS discovery

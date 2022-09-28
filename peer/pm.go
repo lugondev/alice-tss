@@ -30,6 +30,13 @@ func NewPeerManager(id string, host host.Host, protocol protocol.ID) *P2PManager
 	}
 }
 
+func (p *P2PManager) ClonePeerManager(protocol protocol.ID) *P2PManager {
+	pm := *p
+	pm.SetProtocol(protocol)
+
+	return &pm
+}
+
 func (p *P2PManager) NumPeers() uint32 {
 	return uint32(len(p.peers))
 }
@@ -53,6 +60,10 @@ func (p *P2PManager) Peers() map[string]string {
 	return p.peers
 }
 
+func (p *P2PManager) SetProtocol(id protocol.ID) {
+	p.protocol = id
+}
+
 func (p *P2PManager) MustSend(peerID string, message interface{}) {
 	log.Info("P2PManager MustSend", "peerID", peerID, "protocol", p.protocol)
 	err := send(context.Background(), p.Host, p.peers[peerID], message, p.protocol)
@@ -71,21 +82,6 @@ func (p *P2PManager) EnsureAllConnected() {
 		go connectToPeer(p.Host, peerAddr, &wg)
 	}
 	wg.Wait()
-}
-
-// AddPeers adds peers to peer list.
-func (p *P2PManager) AddPeers(peerPorts []int64) error {
-	//for _, peerPort := range peerPorts {
-	//	peerID := utils.GetPeerIDFromPort(peerPort)
-	//	peerAddr, err := getPeerAddr(peerPort)
-	//	if err != nil {
-	//		log.Warn("Cannot get peer address", "peerPort", peerPort, "peerID", peerID, "err", err)
-	//		return err
-	//	}
-	//	log.Info("peer", "addr", peerAddr)
-	//	p.peers[peerID] = peerAddr
-	//}
-	return nil
 }
 
 // AddPeerID adds peerID to peer list.

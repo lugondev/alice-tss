@@ -6,16 +6,22 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
-	"github.com/libp2p/go-libp2p"
-	"github.com/multiformats/go-multiaddr"
-	"math/rand"
-
 	"github.com/getamis/sirius/log"
 	"github.com/golang/protobuf/proto"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/multiformats/go-multiaddr"
+	"math/rand"
+	"time"
+)
+
+const (
+	timeRetryCreateStream  = 10
+	delayRetryCreateStream = 500 * time.Millisecond
 )
 
 // MakeBasicHost creates a LibP2P host.
@@ -93,9 +99,16 @@ func send(ctx context.Context, host host.Host, target string, data interface{}, 
 		return err
 	}
 
-	s, err := host.NewStream(ctx, info.ID, protocol)
-	if err != nil {
-		log.Warn("Cannot create a new stream", "from", host.ID(), "to", target, "err", err)
+	var s network.Stream
+	for i := 0; i < timeRetryCreateStream; i++ {
+		s, err = host.NewStream(ctx, info.ID, protocol)
+		if err != nil {
+			log.Warn("Try create a new stream", "after", fmt.Sprintf("%d miliseconds", delayRetryCreateStream), "to", target, "err", err)
+			time.Sleep(delayRetryCreateStream)
+		}
+	}
+	if s == nil {
+		log.Error("Cannot create a new stream", "from", host.ID(), "to", target, "err", err)
 		return err
 	}
 

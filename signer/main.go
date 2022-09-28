@@ -2,7 +2,6 @@ package signer
 
 import (
 	"fmt"
-	"github.com/libp2p/go-libp2p/core/network"
 	"os"
 
 	"github.com/dgraph-io/badger"
@@ -13,6 +12,7 @@ import (
 	"github.com/spf13/viper"
 
 	"alice-tss/peer"
+	"alice-tss/service"
 	"alice-tss/utils"
 )
 
@@ -50,7 +50,7 @@ var Cmd = &cobra.Command{
 		log.Info("peer host", "pid", pid)
 
 		// Create a new peer manager.
-		pm := peer.NewPeerManager(pid.String(), host, peer.SignerProtocol)
+		pm := peer.NewPeerManager(pid.String(), host, peer.ProtocolId)
 		if err != nil {
 			log.Crit("Failed to add peers", "err", err)
 		}
@@ -66,31 +66,18 @@ var Cmd = &cobra.Command{
 				_, _ = fmt.Fprintf(os.Stderr, "error close badgerDB: %s\n", err.Error())
 			}
 		}()
-		badgerFsm := peer.NewBadger(badgerDB)
+		badgerFsm := peer.NewBadger(badgerDB, privateKey)
 
 		// setup local mDNS discovery
 		if err := peer.SetupDiscovery(host, pm); err != nil {
 			panic(err)
 		}
 
-		service, err := NewService(c, pm, badgerFsm)
-		if err != nil {
-			log.Error("NewService", "err", err)
-			return err
-		}
-
-		// Set a stream handler on the host.
-		host.SetStreamHandler(peer.SignerProtocol, func(s network.Stream) {
-			log.Info("Stream handler base", "protocol", s.Protocol(), "peer", s.Conn().LocalPeer())
-			service.Handle(s)
-		})
-
 		rpcHost := gorpc.NewServer(host, peer.ProtocolId)
-		svc := PingService{
-			service:   service,
-			pm:        pm,
-			config:    c,
-			badgerFsm: badgerFsm,
+		svc := service.TssService{
+			Pm:        pm,
+			Config:    c,
+			BadgerFsm: badgerFsm,
 		}
 
 		if err := rpcHost.Register(&svc); err != nil {
@@ -100,7 +87,7 @@ var Cmd = &cobra.Command{
 			log.Crit("Failed to new service", "err", err)
 		}
 
-		if err := InitRouter(port, mux.NewRouter(), pm, service, c, badgerFsm); err != nil {
+		if err := service.InitRouter(port, mux.NewRouter(), pm, c, badgerFsm); err != nil {
 			log.Crit("init router", "err", err)
 		}
 

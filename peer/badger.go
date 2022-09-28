@@ -1,20 +1,22 @@
 package peer
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"github.com/dgraph-io/badger"
 )
 
 type BadgerFSM struct {
-	db *badger.DB
+	db         *badger.DB
+	privateKey *ecdsa.PrivateKey
 }
 
 // Get fetch data from badgerDB
-func (b BadgerFSM) Get(key string) (interface{}, error) {
+func (fsm BadgerFSM) Get(key string) (interface{}, error) {
 	var keyByte = []byte(key)
 	var data interface{}
 
-	txn := b.db.NewTransaction(false)
+	txn := fsm.db.NewTransaction(false)
 	defer func() {
 		_ = txn.Commit()
 	}()
@@ -48,7 +50,7 @@ func (b BadgerFSM) Get(key string) (interface{}, error) {
 }
 
 // Set store data to badgerDB
-func (b BadgerFSM) Set(key string, value interface{}) error {
+func (fsm BadgerFSM) Set(key string, value interface{}) error {
 	var data = make([]byte, 0)
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -59,7 +61,7 @@ func (b BadgerFSM) Set(key string, value interface{}) error {
 		return nil
 	}
 
-	txn := b.db.NewTransaction(true)
+	txn := fsm.db.NewTransaction(true)
 	err = txn.Set([]byte(key), data)
 	if err != nil {
 		txn.Discard()
@@ -70,7 +72,7 @@ func (b BadgerFSM) Set(key string, value interface{}) error {
 }
 
 // SetArr store [data] to badgerDB
-func (b BadgerFSM) SetArr(key string, value interface{}) error {
+func (fsm BadgerFSM) SetArr(key string, value interface{}) error {
 	var data = make([]byte, 0)
 	data, err := json.Marshal([]interface{}{value})
 	if err != nil {
@@ -80,7 +82,7 @@ func (b BadgerFSM) SetArr(key string, value interface{}) error {
 	if data == nil || len(data) <= 0 {
 		return nil
 	}
-	existValue, err := b.Get(key)
+	existValue, err := fsm.Get(key)
 
 	if existValue != nil && err == nil {
 		//fmt.Println("existValue:", existValue)
@@ -92,7 +94,7 @@ func (b BadgerFSM) SetArr(key string, value interface{}) error {
 		}
 
 	}
-	txn := b.db.NewTransaction(true)
+	txn := fsm.db.NewTransaction(true)
 
 	err = txn.Set([]byte(key), data)
 	if err != nil {
@@ -104,10 +106,10 @@ func (b BadgerFSM) SetArr(key string, value interface{}) error {
 }
 
 // Delete remove data from badgerDB
-func (b BadgerFSM) Delete(key string) error {
+func (fsm BadgerFSM) Delete(key string) error {
 	var keyByte = []byte(key)
 
-	txn := b.db.NewTransaction(true)
+	txn := fsm.db.NewTransaction(true)
 	err := txn.Delete(keyByte)
 	if err != nil {
 		return err
@@ -117,8 +119,9 @@ func (b BadgerFSM) Delete(key string) error {
 }
 
 // NewBadger implementation using badgerDB
-func NewBadger(badgerDB *badger.DB) *BadgerFSM {
+func NewBadger(badgerDB *badger.DB, privateKey *ecdsa.PrivateKey) *BadgerFSM {
 	return &BadgerFSM{
-		db: badgerDB,
+		db:         badgerDB,
+		privateKey: privateKey,
 	}
 }

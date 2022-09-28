@@ -24,12 +24,6 @@ var (
 	ErrConversion = errors.New("conversion error")
 )
 
-// GetPeerIDFromPort gets peer ID from port.
-func GetPeerIDFromPort(port int64) string {
-	// For convenience, we set peer ID as "id-" + port
-	return fmt.Sprintf("id-%d", port)
-}
-
 // GetCurve returns the curve we used in this example.
 func GetCurve() elliptic.Curve {
 	// For simplicity, we use S256 curve.

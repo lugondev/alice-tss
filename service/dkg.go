@@ -1,30 +1,40 @@
-package dkg
+package service
 
 import (
 	"io/ioutil"
 
-	"alice-tss/utils"
 	"github.com/getamis/alice/crypto/tss/dkg"
 	"github.com/getamis/alice/types"
 	"github.com/getamis/sirius/log"
 	"github.com/golang/protobuf/proto"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
+
+	"alice-tss/config"
+	"alice-tss/peer"
+	"alice-tss/utils"
 )
 
-type service struct {
-	config *DKGConfig
+type DkgService struct {
+	config *config.DKGConfig
 	pm     types.PeerManager
+	fsm    *peer.BadgerFSM
 
 	dkg  *dkg.DKG
 	done chan struct{}
+
+	hash       string
+	hostClient *host.Host
 }
 
-func NewService(config *DKGConfig, pm types.PeerManager) (*service, error) {
-	s := &service{
+func NewDkgService(config *config.DKGConfig, pm types.PeerManager, hostClient *host.Host, hash string, badgerFsm *peer.BadgerFSM) (*DkgService, error) {
+	s := &DkgService{
 		config: config,
 		pm:     pm,
+		fsm:    badgerFsm,
 		done:   make(chan struct{}),
 	}
+	log.Warn("new DKG", "config", config, "hash", hash)
 
 	// Create dkg
 	d, err := dkg.NewDKG(utils.GetCurve(), pm, config.Threshold, config.Rank, s)
@@ -33,17 +43,25 @@ func NewService(config *DKGConfig, pm types.PeerManager) (*service, error) {
 		return nil, err
 	}
 	s.dkg = d
+
+	s.hostClient = hostClient
+	s.hash = hash
+
+	(*hostClient).SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
+		s.Handle(stream)
+	})
+
 	return s, nil
 }
 
-func (p *service) Handle(s network.Stream) {
+func (p *DkgService) Handle(s network.Stream) {
 	data := &dkg.Message{}
 	buf, err := ioutil.ReadAll(s)
 	if err != nil {
 		log.Warn("Cannot read data from stream", "err", err)
 		return
 	}
-	s.Close()
+	_ = s.Close()
 
 	// unmarshal it
 	err = proto.Unmarshal(buf, data)
@@ -60,7 +78,7 @@ func (p *service) Handle(s network.Stream) {
 	}
 }
 
-func (p *service) Process() {
+func (p *DkgService) Process() {
 	// 1. Start a DKG process.
 	p.dkg.Start()
 	defer p.dkg.Stop()
@@ -69,7 +87,12 @@ func (p *service) Process() {
 	<-p.done
 }
 
-func (p *service) OnStateChanged(oldState types.MainState, newState types.MainState) {
+func (p *DkgService) closeDone() {
+	close(p.done)
+	(*p.hostClient).RemoveStreamHandler(peer.GetProtocol(p.hash))
+}
+
+func (p *DkgService) OnStateChanged(oldState types.MainState, newState types.MainState) {
 	if newState == types.StateFailed {
 		log.Error("Dkg failed", "old", oldState.String(), "new", newState.String())
 		close(p.done)
@@ -77,12 +100,17 @@ func (p *service) OnStateChanged(oldState types.MainState, newState types.MainSt
 	} else if newState == types.StateDone {
 		log.Info("Dkg done", "old", oldState.String(), "new", newState.String())
 		result, err := p.dkg.GetResult()
+		close(p.done)
+
 		if err == nil {
-			writeDKGResult(p.pm.SelfID(), result)
+			if err := p.fsm.SaveDKGResultData(p.hash, result); err != nil {
+				log.Error("Cannot save dkg result", "err", err)
+				return
+			}
+			log.Info("dkg", "result", result)
 		} else {
 			log.Warn("Failed to get result from DKG", "err", err)
 		}
-		close(p.done)
 		return
 	}
 	log.Info("State changed", "old", oldState.String(), "new", newState.String())

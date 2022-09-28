@@ -1,6 +1,7 @@
-package signer
+package service
 
 import (
+	"encoding/hex"
 	"io/ioutil"
 
 	"github.com/getamis/alice/crypto/homo/paillier"
@@ -8,6 +9,7 @@ import (
 	"github.com/getamis/alice/types"
 	"github.com/getamis/sirius/log"
 	"github.com/golang/protobuf/proto"
+	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 
 	"alice-tss/config"
@@ -15,17 +17,26 @@ import (
 	"alice-tss/utils"
 )
 
-type Service struct {
+type SignerService struct {
 	config *config.SignerConfig
 	pm     types.PeerManager
 	fsm    *peer.BadgerFSM
 
 	signer *signer.Signer
 	done   chan struct{}
+
+	hash       string
+	hostClient *host.Host
 }
 
-func NewService(config *config.SignerConfig, pm types.PeerManager, badgerFsm *peer.BadgerFSM) (*Service, error) {
-	s := &Service{
+func NewSignerService(
+	config *config.SignerConfig,
+	pm types.PeerManager,
+	badgerFsm *peer.BadgerFSM,
+	hostClient *host.Host,
+	msg string,
+) (*SignerService, error) {
+	s := &SignerService{
 		config: config,
 		pm:     pm,
 		fsm:    badgerFsm,
@@ -33,20 +44,21 @@ func NewService(config *config.SignerConfig, pm types.PeerManager, badgerFsm *pe
 	}
 
 	log.Info("Service call")
+	if err := s.createSigner(msg); err != nil {
+		return nil, err
+	}
+	hash := utils.ToHexHash([]byte(msg))
+	s.hash = hash
+	s.hostClient = hostClient
+
+	(*hostClient).SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
+		s.Handle(stream)
+	})
 
 	return s, nil
 }
 
-func (p *Service) closeDone() {
-	_, ok := <-p.done
-	if ok {
-		close(p.done)
-		p.done = make(chan struct{})
-		p.signer = nil
-	}
-}
-
-func (p *Service) CreateSigner(msg string) error {
+func (p *SignerService) createSigner(msg string) error {
 	// For simplicity, we use Paillier algorithm in signer.
 	newPaillier, err := paillier.NewPaillier(2048)
 	if err != nil {
@@ -65,15 +77,14 @@ func (p *Service) CreateSigner(msg string) error {
 	newSigner, err := signer.NewSigner(p.pm, dkgResult.PublicKey, newPaillier, dkgResult.Share, dkgResult.Bks, hashMessage, p)
 	if err != nil {
 		log.Warn("Cannot create a new signer", "err", err)
-		//return err
-	} else {
-		p.signer = newSigner
+		return err
 	}
+	p.signer = newSigner
 
 	return nil
 }
 
-func (p *Service) Handle(s network.Stream) {
+func (p *SignerService) Handle(s network.Stream) {
 	if p.signer == nil {
 		log.Warn("Signer is not created")
 		return
@@ -99,7 +110,7 @@ func (p *Service) Handle(s network.Stream) {
 	}
 }
 
-func (p *Service) Process() {
+func (p *SignerService) Process() {
 	// 1. Start a signer process.
 	p.signer.Start()
 	log.Info("Signer process", "action", "start")
@@ -112,7 +123,12 @@ func (p *Service) Process() {
 	<-p.done
 }
 
-func (p *Service) OnStateChanged(oldState types.MainState, newState types.MainState) {
+func (p *SignerService) closeDone() {
+	close(p.done)
+	(*p.hostClient).RemoveStreamHandler(peer.GetProtocol(p.hash))
+}
+
+func (p *SignerService) OnStateChanged(oldState types.MainState, newState types.MainState) {
 	if newState == types.StateFailed {
 		log.Error("Signer failed", "old", oldState.String(), "new", newState.String())
 		p.closeDone()
@@ -121,6 +137,14 @@ func (p *Service) OnStateChanged(oldState types.MainState, newState types.MainSt
 		log.Info("Signer done", "old", oldState.String(), "new", newState.String())
 		result, err := p.signer.GetResult()
 		if err == nil {
+			if err := p.fsm.SaveSignerResultData(p.hash, config.RVSignature{
+				R:    hex.EncodeToString(result.R.Bytes()),
+				S:    hex.EncodeToString(result.S.Bytes()),
+				Hash: p.hash,
+			}); err != nil {
+				log.Error("Cannot save dkg result", "err", err)
+				return
+			}
 			log.Info("signed", "result", result)
 		} else {
 			log.Warn("Failed to get result from signer", "err", err)
