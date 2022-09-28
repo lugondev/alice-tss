@@ -205,6 +205,47 @@ func (h *RpcService) GetDKG(_ *http.Request, args *RpcKeyArgs, reply *RpcDataRep
 	return nil
 }
 
+func (h *RpcService) CheckSignature(_ *http.Request, args *RpcDataArgs, reply *RpcDataReply) error {
+	log.Info("RPC server", "CheckSignature", "called", "args", args)
+
+	var dataSignature DataSignatureByPubkey
+	argData, err := json.Marshal(args.Data)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(argData, &dataSignature)
+	if err != nil {
+		return err
+	}
+
+	hash := utils.ToHexHash([]byte(dataSignature.Message))
+	log.Info("CheckSignature", "hash", hash)
+
+	data, err := h.badgerFsm.Get(hash)
+	if err != nil {
+		return err
+	}
+	if err != nil {
+		return err
+	}
+
+	var rvSignature config.RVSignature
+	rvsData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(rvsData, &rvSignature)
+	if err != nil {
+		return err
+	}
+	checkedSignature, err := utils.CheckSignatureECDSA(dataSignature.Message, rvSignature, dataSignature.Pubkey)
+	if err != nil {
+		return err
+	}
+	reply.Data = checkedSignature
+	return nil
+}
+
 func InitRouter(port int, r *mux.Router, pm *peer.P2PManager, badgerFsm *peer.BadgerFSM) error {
 	rpcServer := rpc.NewServer()
 	rpcServer.RegisterCodec(rpcjson.NewCodec(), "application/json")

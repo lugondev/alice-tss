@@ -28,6 +28,11 @@ type DataReshare struct {
 	Pubkey string `json:"pubkey"`
 }
 
+type DataSignatureByPubkey struct {
+	Message string `json:"message"`
+	Pubkey  string `json:"pubkey"`
+}
+
 type RpcKeyArgs struct {
 	Key string `json:"key"`
 }

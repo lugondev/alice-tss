@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"alice-tss/config"
 	"fmt"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"os"
 
 	"github.com/dgraph-io/badger"
@@ -115,4 +118,18 @@ func initService(cmd *cobra.Command) error {
 	port = viper.GetInt("port")
 
 	return nil
+}
+
+func readAppConfigFile(filaPath string) (*config.AppConfig, error) {
+	c := &config.AppConfig{}
+	yamlFile, err := ioutil.ReadFile(filaPath)
+	if err != nil {
+		return nil, err
+	}
+	err = yaml.Unmarshal(yamlFile, c)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
