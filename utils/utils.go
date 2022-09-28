@@ -6,17 +6,18 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/crypto"
 	"io/ioutil"
 	"math/big"
 
-	"alice-tss/config"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/getamis/alice/crypto/birkhoffinterpolation"
 	"github.com/getamis/alice/crypto/ecpointgrouplaw"
 	"github.com/getamis/alice/crypto/elliptic"
 	"github.com/getamis/alice/crypto/tss/dkg"
 	"github.com/getamis/sirius/log"
+
+	"alice-tss/config"
 )
 
 var (

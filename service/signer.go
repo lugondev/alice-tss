@@ -73,8 +73,7 @@ func (p *SignerService) createSigner(msg string) error {
 	}
 
 	log.Info("Signer created", "msg", msg)
-	hashMessage := utils.EthSignMessage([]byte(msg))
-	newSigner, err := signer.NewSigner(p.pm, dkgResult.PublicKey, newPaillier, dkgResult.Share, dkgResult.Bks, hashMessage, p)
+	newSigner, err := signer.NewSigner(p.pm, dkgResult.PublicKey, newPaillier, dkgResult.Share, dkgResult.Bks, []byte(msg), p)
 	if err != nil {
 		log.Warn("Cannot create a new cmd", "err", err)
 		return err

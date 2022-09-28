@@ -33,13 +33,11 @@ func CheckSignatureECDSA(msg string, signature config.RVSignature, pubkey string
 		return nil, err
 	}
 
-	hashedMsg := EthSignMessage([]byte(msg))
-
-	status := ecdsa.Verify(publicKey, hashedMsg, rBig, sBig)
+	status := ecdsa.Verify(publicKey, []byte(msg), rBig, sBig)
 	return &ResponseCheckSignature{
 		IsValid:     status,
 		Message:     msg,
-		HashMessage: hex.EncodeToString(hashedMsg),
+		HashMessage: hex.EncodeToString([]byte(msg)),
 		Address:     crypto.PubkeyToAddress(*publicKey).String(),
 	}, nil
 }
