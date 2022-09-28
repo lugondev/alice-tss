@@ -26,3 +26,5 @@ example/example
 
 # output
 *-output.yaml
+
+cmd/tss
