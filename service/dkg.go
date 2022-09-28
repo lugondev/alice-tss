@@ -103,11 +103,11 @@ func (p *DkgService) OnStateChanged(oldState types.MainState, newState types.Mai
 		close(p.done)
 
 		if err == nil {
+			//log.Info("Register dkg", "result", result)
 			if err := p.fsm.SaveDKGResultData(p.hash, result); err != nil {
 				log.Error("Cannot save dkg result", "err", err)
 				return
 			}
-			log.Info("dkg", "result", result)
 		} else {
 			log.Warn("Failed to get result from DKG", "err", err)
 		}

@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/getamis/alice/crypto/tss/dkg"
+	"github.com/getamis/alice/crypto/tss/ecdsa/gg18/reshare"
 	"github.com/getamis/sirius/log"
 	"math/big"
 )
@@ -53,6 +54,34 @@ func (fsm BadgerFSM) SaveDKGResultData(hash string, result *dkg.Result) error {
 	return nil
 }
 
+// UpdateDKGResultData update dkg reshare data
+func (fsm BadgerFSM) UpdateDKGResultData(hash string, result *reshare.Result) error {
+	oldDkg, err := fsm.GetDKGResultData(hash)
+	if err != nil {
+		log.Error("GetDKGResultData", "err", err)
+		return err
+	}
+	log.Info("UpdateDKGResultData", "hash", hash)
+
+	encryptedShare, err := utils.Encrypt(
+		common.Bytes2Hex(result.Share.Bytes()),
+		crypto.FromECDSA(fsm.privateKey),
+		oldDkg.PublicKey)
+
+	if err != nil {
+		log.Error("UpdateDKGResultData", "err", err)
+		return err
+	}
+
+	oldDkg.Share = encryptedShare
+
+	err = fsm.Set(hash, oldDkg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // SaveSignerResultData save cmd result data
 func (fsm BadgerFSM) SaveSignerResultData(hash string, result config.RVSignature) error {
 	log.Info("SaveSignerResultData", "hash", hash, "result", result)
@@ -65,9 +94,9 @@ func (fsm BadgerFSM) SaveSignerResultData(hash string, result config.RVSignature
 }
 
 // GetDKGResultData get dkg result data
-func (fsm BadgerFSM) GetDKGResultData(pubkey string) (*config.DKGResult, error) {
-	data, err := fsm.Get(pubkey)
-	log.Info("GetDKGResultData", "pubkey", pubkey, "data", data)
+func (fsm BadgerFSM) GetDKGResultData(hash string) (*config.DKGResult, error) {
+	data, err := fsm.Get(hash)
+	log.Info("GetDKGResultData", "hash", hash, "data", data)
 	if err != nil {
 		return nil, err
 	}

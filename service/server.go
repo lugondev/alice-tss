@@ -17,7 +17,7 @@ import (
 	"alice-tss/utils"
 )
 
-func (h *RpcService) SignMessage(_ *http.Request, args *RpcDataArgs, _ *RpcNoneArgs) error {
+func (h *RpcService) SignMessage(_ *http.Request, args *RpcDataArgs, reply *RpcDataReply) error {
 	log.Info("RPC server", "SignMessage", "called", "args", args)
 	var dataRequestSign DataRequestSign
 	argData, err := json.Marshal(args.Data)
@@ -36,6 +36,7 @@ func (h *RpcService) SignMessage(_ *http.Request, args *RpcDataArgs, _ *RpcNoneA
 	}
 
 	hash := utils.ToHexHash([]byte(dataRequestSign.Message))
+	reply.Data = hash
 	pm := h.pm.ClonePeerManager(peer.GetProtocol(hash))
 
 	service, err := NewSignerService(signerCfg, pm, h.badgerFsm, &pm.Host, dataRequestSign.Message)
@@ -124,18 +125,32 @@ func (h *RpcService) RegisterDKG(_ *http.Request, _ *RpcDataArgs, reply *RpcData
 	return nil
 }
 
-func (h *RpcService) Reshare(_ *http.Request, _ *RpcDataArgs, reply *RpcDataReply) error {
-	log.Info("RPC server", "Reshare", "called")
+func (h *RpcService) Reshare(_ *http.Request, args *RpcDataArgs, reply *RpcDataReply) error {
+	log.Info("RPC server", "Reshare", "called", "args", args)
 
-	cfg := &config.ReshareConfig{
-		Threshold: 3,
+	var dataShare DataReshare
+	argData, err := json.Marshal(args.Data)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(argData, &dataShare)
+	if err != nil {
+		return err
+	}
+	reply.Data = dataShare.Hash
+	signerCfg, err := h.badgerFsm.GetSignerConfig(dataShare.Hash, dataShare.Pubkey)
+	if err != nil {
+		log.Error("GetSignerConfig", "err", err)
+		return err
 	}
 
-	timeNow := time.Now()
-	hash := utils.ToHexHash([]byte(timeNow.String()))
-
-	pm := h.pm.ClonePeerManager(peer.GetProtocol(hash))
-	service, err := NewReshareService(cfg, pm, &pm.Host, hash)
+	pm := h.pm.ClonePeerManager(peer.GetProtocol(dataShare.Hash))
+	service, err := NewReshareService(&config.ReshareConfig{
+		Threshold: 2,
+		Share:     signerCfg.Share,
+		Pubkey:    signerCfg.Pubkey,
+		BKs:       signerCfg.BKs,
+	}, pm, &pm.Host, dataShare.Hash, h.badgerFsm)
 	if err != nil {
 		log.Error("NewDkgService", "err", err)
 		return err
@@ -151,7 +166,7 @@ func (h *RpcService) Reshare(_ *http.Request, _ *RpcDataArgs, reply *RpcDataRepl
 			"TssService",
 			"Reshare",
 			PingArgs{
-				Data: []byte(hash),
+				Data: argData,
 			},
 		}, &wg)
 

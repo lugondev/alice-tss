@@ -64,6 +64,37 @@ func (t *TssService) SignMessage(_ context.Context, args PingArgs, _ *PingReply)
 	return nil
 }
 
+func (t *TssService) Reshare(_ context.Context, args PingArgs, _ *PingReply) error {
+	log.Info("RPC server", "Reshare", "called", "args", args)
+	var data DataReshare
+	err := json.Unmarshal(args.Data, &data)
+	if err != nil {
+		return err
+	}
+	signerCfg, err := t.BadgerFsm.GetSignerConfig(data.Hash, data.Pubkey)
+	if err != nil {
+		log.Error("GetSignerConfig", "err", err)
+		return err
+	}
+
+	pm := t.Pm.ClonePeerManager(peer.GetProtocol(data.Hash))
+	service, err := NewReshareService(&config.ReshareConfig{
+		Threshold: 2,
+		Share:     signerCfg.Share,
+		Pubkey:    signerCfg.Pubkey,
+		BKs:       signerCfg.BKs,
+	}, pm, &pm.Host, data.Hash, t.BadgerFsm)
+	if err != nil {
+		log.Error("NewSignerService", "err", err)
+		return err
+	}
+
+	log.Info("Stream Test", "service process", "called")
+	go service.Process()
+
+	return nil
+}
+
 func (t *TssService) RegisterDKG(_ context.Context, argType PingArgs, _ *PingReply) error {
 	log.Info("RegisterDKG")
 

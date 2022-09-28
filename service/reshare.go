@@ -7,7 +7,6 @@ import (
 	"github.com/getamis/alice/types"
 	"github.com/getamis/sirius/log"
 	"github.com/golang/protobuf/proto"
-	"github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 
@@ -19,18 +18,20 @@ import (
 type ReshareService struct {
 	config *config.ReshareConfig
 	pm     types.PeerManager
+	fsm    *peer.BadgerFSM
 
 	reshare *reshare.Reshare
 	done    chan struct{}
 
-	currentProtocolID core.ProtocolID
-	hostClient        *host.Host
+	hash       string
+	hostClient *host.Host
 }
 
-func NewReshareService(config *config.ReshareConfig, pm types.PeerManager, hostClient *host.Host, hash string) (*ReshareService, error) {
+func NewReshareService(config *config.ReshareConfig, pm types.PeerManager, hostClient *host.Host, hash string, badgerFsm *peer.BadgerFSM) (*ReshareService, error) {
 	s := &ReshareService{
 		config: config,
 		pm:     pm,
+		fsm:    badgerFsm,
 		done:   make(chan struct{}),
 	}
 
@@ -49,7 +50,7 @@ func NewReshareService(config *config.ReshareConfig, pm types.PeerManager, hostC
 	}
 
 	s.hostClient = hostClient
-	s.currentProtocolID = peer.GetProtocol(hash)
+	s.hash = hash
 
 	(*hostClient).SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
 		s.Handle(stream)
@@ -92,7 +93,7 @@ func (p *ReshareService) Process() {
 }
 func (p *ReshareService) closeDone() {
 	close(p.done)
-	(*p.hostClient).RemoveStreamHandler(p.currentProtocolID)
+	(*p.hostClient).RemoveStreamHandler(peer.GetProtocol(p.hash))
 }
 
 func (p *ReshareService) OnStateChanged(oldState types.MainState, newState types.MainState) {
@@ -104,7 +105,11 @@ func (p *ReshareService) OnStateChanged(oldState types.MainState, newState types
 		log.Info("Reshare done", "old", oldState.String(), "new", newState.String())
 		result, err := p.reshare.GetResult()
 		if err == nil {
-			log.Info("reshare", "result", result)
+			//log.Info("reshare", "result", result)
+			if err := p.fsm.UpdateDKGResultData(p.hash, result); err != nil {
+				log.Error("Cannot update DKG result data", "err", err)
+				return
+			}
 		} else {
 			log.Warn("Failed to get result from reshare", "err", err)
 		}

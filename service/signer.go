@@ -137,6 +137,8 @@ func (p *SignerService) OnStateChanged(oldState types.MainState, newState types.
 		log.Info("Signer done", "old", oldState.String(), "new", newState.String())
 		result, err := p.signer.GetResult()
 		if err == nil {
+			//log.Info("signed", "result", result)
+
 			if err := p.fsm.SaveSignerResultData(p.hash, config.RVSignature{
 				R:    hex.EncodeToString(result.R.Bytes()),
 				S:    hex.EncodeToString(result.S.Bytes()),
@@ -145,7 +147,6 @@ func (p *SignerService) OnStateChanged(oldState types.MainState, newState types.
 				log.Error("Cannot save dkg result", "err", err)
 				return
 			}
-			log.Info("signed", "result", result)
 		} else {
 			log.Warn("Failed to get result from cmd", "err", err)
 		}

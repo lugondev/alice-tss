@@ -23,6 +23,11 @@ type DataRequestSign struct {
 	Message string `json:"message"`
 }
 
+type DataReshare struct {
+	Hash   string `json:"hash"`
+	Pubkey string `json:"pubkey"`
+}
+
 type RpcKeyArgs struct {
 	Key string `json:"key"`
 }
