@@ -1,4 +1,4 @@
-package signer
+package cmd
 
 import (
 	"fmt"
@@ -22,16 +22,15 @@ var password string
 var port int
 
 var Cmd = &cobra.Command{
-	Use:   "signer",
-	Short: "Signer process",
-	Long:  `Signing for using the secret shares to generate a signature.`,
+	Use:   "start",
+	Short: "TSS run process with RPC, P2P",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := initService(cmd)
 		if err != nil {
 			log.Crit("Failed to init", "err", err)
 		}
 
-		c, err := readSignerConfigFile(configFile)
+		appConfig, err := readAppConfigFile(configFile)
 		if err != nil {
 			log.Crit("Failed to read config file", "configFile", configFile, "err", err)
 		}
@@ -42,7 +41,7 @@ var Cmd = &cobra.Command{
 		}
 
 		// Make a host that listens on the given multiaddress.
-		host, pid, err := peer.MakeBasicHost(c.Port, privateKey)
+		host, pid, err := peer.MakeBasicHost(appConfig.Port, privateKey)
 		if err != nil {
 			log.Crit("Failed to create a basic host", "err", err)
 		}
@@ -55,7 +54,7 @@ var Cmd = &cobra.Command{
 			log.Crit("Failed to add peers", "err", err)
 		}
 
-		badgerOpt := badger.DefaultOptions(c.BadgerDir)
+		badgerOpt := badger.DefaultOptions(appConfig.BadgerDir)
 		badgerDB, err := badger.Open(badgerOpt)
 		if err != nil {
 			return err
@@ -76,7 +75,6 @@ var Cmd = &cobra.Command{
 		rpcHost := gorpc.NewServer(host, peer.ProtocolId)
 		svc := service.TssService{
 			Pm:        pm,
-			Config:    c,
 			BadgerFsm: badgerFsm,
 		}
 
@@ -87,7 +85,11 @@ var Cmd = &cobra.Command{
 			log.Crit("Failed to new service", "err", err)
 		}
 
-		if err := service.InitRouter(port, mux.NewRouter(), pm, c, badgerFsm); err != nil {
+		rpcPort := appConfig.RPC
+		if port != 0 {
+			rpcPort = port
+		}
+		if err := service.InitRouter(rpcPort, mux.NewRouter(), pm, badgerFsm); err != nil {
 			log.Crit("init router", "err", err)
 		}
 
@@ -96,10 +98,10 @@ var Cmd = &cobra.Command{
 }
 
 func init() {
-	Cmd.Flags().String("config", "", "signer config file path")
+	Cmd.Flags().String("config", "", "cmd config file path")
 	Cmd.Flags().String("keystore", "", "keystore file path")
 	Cmd.Flags().String("password", "111111", "password")
-	Cmd.Flags().Int("port", 1234, "port server")
+	Cmd.Flags().Int("port", 0, "port server")
 }
 
 func initService(cmd *cobra.Command) error {

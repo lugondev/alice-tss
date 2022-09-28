@@ -59,7 +59,7 @@ func NewSignerService(
 }
 
 func (p *SignerService) createSigner(msg string) error {
-	// For simplicity, we use Paillier algorithm in signer.
+	// For simplicity, we use Paillier algorithm in cmd.
 	newPaillier, err := paillier.NewPaillier(2048)
 	if err != nil {
 		log.Warn("Cannot create a paillier function", "err", err)
@@ -76,7 +76,7 @@ func (p *SignerService) createSigner(msg string) error {
 	hashMessage := utils.EthSignMessage([]byte(msg))
 	newSigner, err := signer.NewSigner(p.pm, dkgResult.PublicKey, newPaillier, dkgResult.Share, dkgResult.Bks, hashMessage, p)
 	if err != nil {
-		log.Warn("Cannot create a new signer", "err", err)
+		log.Warn("Cannot create a new cmd", "err", err)
 		return err
 	}
 	p.signer = newSigner
@@ -105,13 +105,13 @@ func (p *SignerService) Handle(s network.Stream) {
 	log.Info("Received request", "from", s.Conn().RemotePeer())
 	err = p.signer.AddMessage(data)
 	if err != nil {
-		log.Warn("Cannot add message to signer", "err", err)
+		log.Warn("Cannot add message to cmd", "err", err)
 		return
 	}
 }
 
 func (p *SignerService) Process() {
-	// 1. Start a signer process.
+	// 1. Start a cmd process.
 	p.signer.Start()
 	log.Info("Signer process", "action", "start")
 	defer func() {
@@ -119,7 +119,7 @@ func (p *SignerService) Process() {
 		p.signer.Stop()
 	}()
 
-	// 2. Wait the signer is done or failed
+	// 2. Wait the cmd is done or failed
 	<-p.done
 }
 
@@ -147,7 +147,7 @@ func (p *SignerService) OnStateChanged(oldState types.MainState, newState types.
 			}
 			log.Info("signed", "result", result)
 		} else {
-			log.Warn("Failed to get result from signer", "err", err)
+			log.Warn("Failed to get result from cmd", "err", err)
 		}
 		p.closeDone()
 		return

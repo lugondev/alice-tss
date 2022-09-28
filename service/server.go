@@ -190,13 +190,12 @@ func (h *RpcService) GetDKG(_ *http.Request, args *RpcKeyArgs, reply *RpcDataRep
 	return nil
 }
 
-func InitRouter(port int, r *mux.Router, pm *peer.P2PManager, c *config.SignerConfig, badgerFsm *peer.BadgerFSM) error {
+func InitRouter(port int, r *mux.Router, pm *peer.P2PManager, badgerFsm *peer.BadgerFSM) error {
 	rpcServer := rpc.NewServer()
 	rpcServer.RegisterCodec(rpcjson.NewCodec(), "application/json")
 
 	err := rpcServer.RegisterService(&RpcService{
 		pm:        pm,
-		config:    c,
 		badgerFsm: badgerFsm,
 	}, "signer")
 	if err != nil {

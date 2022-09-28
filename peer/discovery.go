@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	SignerProtocol = "/signer/1.0.0"
+	SignerProtocol = "/cmd/1.0.0"
 	DKGProtocol    = "/dkg/1.0.0"
 	ProtocolId     = "/p2p/1.0.0"
 	// DiscoveryServiceTag is used in our mDNS advertisements to discover other chat peers.

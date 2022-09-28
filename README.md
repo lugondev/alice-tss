@@ -191,17 +191,17 @@ When signing, each node will need to consume their own config file (e.g `signer/
 
 On node A,
 ```sh
-> ./example signer --config signer/id-10001-input.yaml
+> ./example cmd --config cmd/id-10001-input.yaml
 ```
 
 On node B,
 ```sh
-> ./example signer --config signer/id-10002-input.yaml
+> ./example cmd --config cmd/id-10002-input.yaml
 ```
 
 On node C,
 ```sh
-> ./example signer --config signer/id-10003-input.yaml
+> ./example cmd --config cmd/id-10003-input.yaml
 ```
 
 After signing, there should be 3 new output files created in `example/signer` folder.

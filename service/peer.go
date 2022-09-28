@@ -34,7 +34,6 @@ type PingReply struct {
 
 type TssService struct {
 	Pm        *peer.P2PManager
-	Config    *config.SignerConfig
 	BadgerFsm *peer.BadgerFSM
 }
 

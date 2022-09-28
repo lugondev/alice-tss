@@ -17,24 +17,22 @@ import (
 	"fmt"
 	"os"
 
-	"alice-tss/signer"
+	"alice-tss/cmd"
 	"github.com/spf13/cobra"
 )
 
-var cmd = &cobra.Command{
-	Use:   "tss-example",
-	Short: "TSS example",
-	Long:  `This is a tss example`,
+var command = &cobra.Command{
+	Use:   "tss",
+	Short: "Hierarchical Threshold Signature Scheme ",
+	Long:  `Hierarchical Threshold Signature Scheme `,
 }
 
 func init() {
-	//cmd.AddCommand(dkg.Cmd)
-	cmd.AddCommand(signer.Cmd)
-	//cmd.AddCommand(reshare.Cmd)
+	command.AddCommand(cmd.Cmd)
 }
 
 func main() {
-	if err := cmd.Execute(); err != nil {
+	if err := command.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)
 	}

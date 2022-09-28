@@ -53,7 +53,7 @@ func (fsm BadgerFSM) SaveDKGResultData(hash string, result *dkg.Result) error {
 	return nil
 }
 
-// SaveSignerResultData save signer result data
+// SaveSignerResultData save cmd result data
 func (fsm BadgerFSM) SaveSignerResultData(hash string, result config.RVSignature) error {
 	log.Info("SaveSignerResultData", "hash", hash, "result", result)
 
@@ -83,7 +83,7 @@ func (fsm BadgerFSM) GetDKGResultData(pubkey string) (*config.DKGResult, error) 
 	return &result, nil
 }
 
-// GetSignerConfig get signer config
+// GetSignerConfig get cmd config
 func (fsm BadgerFSM) GetSignerConfig(hash, pubkey string) (*config.SignerConfig, error) {
 	log.Info("GetSignerConfig", "hash", hash, "pubkey", pubkey)
 

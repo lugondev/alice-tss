@@ -1,4 +1,4 @@
-package signer
+package cmd
 
 import (
 	"gopkg.in/yaml.v2"
@@ -7,8 +7,8 @@ import (
 	"alice-tss/config"
 )
 
-func readSignerConfigFile(filaPath string) (*config.SignerConfig, error) {
-	c := &config.SignerConfig{}
+func readAppConfigFile(filaPath string) (*config.AppConfig, error) {
+	c := &config.AppConfig{}
 	yamlFile, err := ioutil.ReadFile(filaPath)
 	if err != nil {
 		return nil, err

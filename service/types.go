@@ -9,7 +9,7 @@ import (
 type RpcService struct {
 	pm         *peer.P2PManager
 	hostClient host.Host
-	config     *config.SignerConfig
+	config     *config.AppConfig
 	badgerFsm  *peer.BadgerFSM
 }
 

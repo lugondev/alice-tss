@@ -18,13 +18,16 @@ type BK struct {
 	Rank uint32 `yaml:"rank"`
 }
 
+type AppConfig struct {
+	Port      int64  `yaml:"port"`
+	RPC       int    `yaml:"rpc"`
+	BadgerDir string `yaml:"badger-dir"`
+}
+
 type SignerConfig struct {
-	Port   int64         `yaml:"port"`
 	Share  string        `yaml:"share" json:"share"`
 	Pubkey Pubkey        `yaml:"pubkey" json:"pubkey"`
 	BKs    map[string]BK `yaml:"bks" json:"bks"`
-
-	BadgerDir string `yaml:"badger-dir"`
 }
 
 type DKGConfig struct {
