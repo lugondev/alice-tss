@@ -239,10 +239,6 @@ make tss
 
 After the binary was built, open three terminals.
 
-### DKG
-
-First, run 3 hosts on different terminals. Each node will need to consume a config file (e.g `dkg/id-10001-input.yaml`) by using `--config` or `-c` to specify the path of the config file. These 3 nodes will try to connect to each other. Once it connects to a peer, it will send the peer message out. After the peer messages are fully transmitted, each node will try to get the result and write it to the respective result file.
-
 On node A,
 id-10001-input.yaml
 ```yaml

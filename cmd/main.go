@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"alice-tss/config"
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -14,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"alice-tss/config"
 	"alice-tss/peer"
 	"alice-tss/service"
 	"alice-tss/utils"
