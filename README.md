@@ -1,4 +1,5 @@
 # TSS example
+Base on the [Alice](https://github.com/getamis/alice)
 
 This program demonstrates a simple TSS by using [go-libp2p](https://github.com/libp2p/go-libp2p). It contains 3 main functions which are
 
