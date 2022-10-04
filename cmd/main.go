@@ -76,7 +76,7 @@ var Cmd = &cobra.Command{
 		}
 
 		rpcHost := gorpc.NewServer(host, peer.ProtocolId)
-		svc := service.TssService{
+		svc := service.TssPeerService{
 			Pm:        pm,
 			BadgerFsm: badgerFsm,
 			TssCaller: &service.TssCaller{BadgerFsm: badgerFsm},

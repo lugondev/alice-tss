@@ -1,14 +1,13 @@
 package service
 
 import (
-	"io/ioutil"
-
 	"github.com/getamis/alice/crypto/tss/ecdsa/gg18/reshare"
 	"github.com/getamis/alice/types"
 	"github.com/getamis/sirius/log"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
+	"io"
 
 	"alice-tss/config"
 	"alice-tss/peer"
@@ -61,7 +60,7 @@ func NewReshareService(config *config.ReshareConfig, pm types.PeerManager, hostC
 
 func (p *ReshareService) Handle(s network.Stream) {
 	data := &reshare.Message{}
-	buf, err := ioutil.ReadAll(s)
+	buf, err := io.ReadAll(s)
 	if err != nil {
 		log.Warn("Cannot read data from stream", "err", err)
 		return

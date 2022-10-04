@@ -5,7 +5,9 @@ import (
 	"alice-tss/peer"
 	"alice-tss/utils"
 	"context"
+	"encoding/hex"
 	"fmt"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/getamis/sirius/log"
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
@@ -21,13 +23,7 @@ type grpcServer struct {
 	tssCaller *TssCaller
 }
 
-func (s *grpcServer) SignMessage(_ context.Context, signRequest *tss.SignRequest) (*tss.ServiceReply, error) {
-	//signerCfg, err := s.badgerFsm.GetSignerConfig(signRequest.Hash, signRequest.Pubkey)
-	//if err != nil {
-	//	log.Error("GetSignerConfig", "err", err)
-	//	return nil, err
-	//}
-
+func (s *grpcServer) SignMessage(_ context.Context, signRequest *tss.SignRequest) (*tss.RVSignatureReply, error) {
 	hash := utils.ToHexHash([]byte(signRequest.Message))
 	pm := s.pm.ClonePeerManager(peer.GetProtocol(hash))
 
@@ -36,13 +32,54 @@ func (s *grpcServer) SignMessage(_ context.Context, signRequest *tss.SignRequest
 		log.Warn("Cannot proto marshal message", "err", err)
 		return nil, err
 	}
-	if err := s.tssCaller.SignMessage(pm, signRequest, RpcToPeer(pm, "TssService", "SignMessage", bs)); err != nil {
+
+	result, err := s.tssCaller.SignMessage(pm, signRequest, RpcToPeer(pm, "TssPeerService", "SignMessage", bs))
+
+	if err == nil {
+		signature := &tss.RVSignatureReply{
+			R:    hex.EncodeToString(result.R.Bytes()),
+			S:    hex.EncodeToString(result.S.Bytes()),
+			Hash: hash,
+		}
+		return signature, nil
+	}
+
+	return nil, err
+}
+
+func (s *grpcServer) RegisterDKG(_ context.Context, _ *tss.DKGRequest) (*tss.DkgReply, error) {
+	hash := utils.RandomHash()
+	pm := s.pm.ClonePeerManager(peer.GetProtocol(hash))
+
+	result, err := s.tssCaller.RegisterDKG(pm, hash, RpcToPeer(pm, "TssPeerService", "RegisterDKG", []byte(hash)))
+	log.Info("RegisterDKG", "result", result, "err", err)
+	if err == nil {
+		pubkey := crypto.CompressPubkey(result.PublicKey.ToPubKey())
+		dkgReply := &tss.DkgReply{
+			X:       hex.EncodeToString(result.PublicKey.GetX().Bytes()),
+			Y:       hex.EncodeToString(result.PublicKey.GetY().Bytes()),
+			Address: crypto.PubkeyToAddress(*result.PublicKey.ToPubKey()).String(),
+			Pubkey:  hex.EncodeToString(pubkey),
+		}
+		return dkgReply, nil
+	}
+
+	return nil, err
+}
+
+func (s *grpcServer) Reshare(_ context.Context, reshareRequest *tss.ReshareRequest) (*tss.ServiceReply, error) {
+	bs, err := proto.Marshal(reshareRequest)
+	if err != nil {
+		log.Warn("Cannot proto marshal message", "err", err)
+		return nil, err
+	}
+	pm := s.pm.ClonePeerManager(peer.GetProtocol(reshareRequest.Hash))
+
+	if err := s.tssCaller.Reshare(pm, reshareRequest, RpcToPeer(pm, "TssPeerService", "Reshare", bs)); err != nil {
 		return nil, err
 	}
 
-	return &tss.ServiceReply{
-		Data: nil,
-	}, nil
+	return &tss.ServiceReply{}, nil
 }
 
 func StartGRPC(port int, pm *peer.P2PManager, badgerFsm *peer.BadgerFSM) {
@@ -56,6 +93,7 @@ func StartGRPC(port int, pm *peer.P2PManager, badgerFsm *peer.BadgerFSM) {
 		badgerFsm: badgerFsm,
 		tssCaller: &TssCaller{BadgerFsm: badgerFsm},
 	})
+
 	log.Info("server listening", "addr", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Crit("failed to serve: %v", err)

@@ -1,14 +1,13 @@
 package service
 
 import (
-	"io/ioutil"
-
 	"github.com/getamis/alice/crypto/tss/dkg"
 	"github.com/getamis/alice/types"
 	"github.com/getamis/sirius/log"
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
+	"io"
 
 	"alice-tss/config"
 	"alice-tss/peer"
@@ -54,9 +53,13 @@ func NewDkgService(config *config.DKGConfig, pm types.PeerManager, hostClient *h
 	return s, nil
 }
 
+func (p *DkgService) GetResult() (*dkg.Result, error) {
+	return p.dkg.GetResult()
+}
+
 func (p *DkgService) Handle(s network.Stream) {
 	data := &dkg.Message{}
-	buf, err := ioutil.ReadAll(s)
+	buf, err := io.ReadAll(s)
 	if err != nil {
 		log.Warn("Cannot read data from stream", "err", err)
 		return

@@ -1,9 +1,10 @@
 package service
 
 import (
+	"alice-tss/config"
+	"alice-tss/peer"
+	"alice-tss/utils"
 	"encoding/hex"
-	"io/ioutil"
-
 	"github.com/getamis/alice/crypto/homo/paillier"
 	"github.com/getamis/alice/crypto/tss/ecdsa/gg18/signer"
 	"github.com/getamis/alice/types"
@@ -11,10 +12,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
-
-	"alice-tss/config"
-	"alice-tss/peer"
-	"alice-tss/utils"
+	"io"
 )
 
 type SignerService struct {
@@ -83,13 +81,17 @@ func (p *SignerService) createSigner(msg string) error {
 	return nil
 }
 
+func (p *SignerService) GetResult() (*signer.Result, error) {
+	return p.signer.GetResult()
+}
+
 func (p *SignerService) Handle(s network.Stream) {
 	if p.signer == nil {
 		log.Warn("Signer is not created")
 		return
 	}
 	data := &signer.Message{}
-	buf, err := ioutil.ReadAll(s)
+	buf, err := io.ReadAll(s)
 	if err != nil {
 		log.Warn("Cannot read data from stream", "err", err)
 		return

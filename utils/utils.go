@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"math/rand"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -133,4 +135,10 @@ func ToHex(b []byte) string {
 
 func ToHexHash(b []byte) string {
 	return ToHex(crypto.Keccak256(b))
+}
+
+func RandomHash() string {
+	timeNow := time.Now()
+	rnd := rand.Intn(1000000)
+	return ToHexHash([]byte(fmt.Sprintf("%s%d", timeNow.String(), rnd)))
 }

@@ -1,16 +1,15 @@
 package service
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"sync"
-	"time"
-
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/getamis/sirius/log"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc/v2"
 	rpcjson "github.com/gorilla/rpc/v2/json2"
+	"net/http"
 
 	"alice-tss/config"
 	"alice-tss/pb/tss"
@@ -33,61 +32,37 @@ func (h *RpcService) SignMessage(_ *http.Request, args *RpcDataArgs, reply *RpcD
 
 	hash := utils.ToHexHash([]byte(dataRequestSign.Message))
 	pm := h.pm.ClonePeerManager(peer.GetProtocol(hash))
-	reply.Data = hash
 
-	return h.tssCaller.SignMessage(pm, &dataRequestSign, RpcToPeer(pm, "TssService", "SignMessage", argData))
+	result, err := h.tssCaller.SignMessage(pm, &dataRequestSign, RpcToPeer(pm, "TssPeerService", "SignMessage", argData))
+	if err == nil {
+		reply.Data = config.RVSignature{
+			R:    hex.EncodeToString(result.R.Bytes()),
+			S:    hex.EncodeToString(result.S.Bytes()),
+			Hash: hash,
+		}
+	}
+
+	return err
 }
 
 func (h *RpcService) RegisterDKG(_ *http.Request, _ *RpcDataArgs, reply *RpcDataReply) error {
 	log.Info("RPC server", "RegisterDKG", "called")
 
-	cfg := &config.DKGConfig{
-		Rank:      0,
-		Threshold: h.pm.NumPeers(),
-	}
-
-	timeNow := time.Now()
-	hash := utils.ToHexHash([]byte(timeNow.String()))
-	reply.Data = struct {
-		Hash   string            `json:"hash"`
-		Config *config.DKGConfig `json:"config"`
-	}{
-		Hash:   hash,
-		Config: cfg,
-	}
-
+	hash := utils.RandomHash()
 	pm := h.pm.ClonePeerManager(peer.GetProtocol(hash))
-	service, err := NewDkgService(cfg, pm, &pm.Host, hash, h.badgerFsm)
-	if err != nil {
-		log.Error("NewDkgService", "err", err)
-		return err
-	}
-	var wg sync.WaitGroup
 
-	for _, peerId := range h.pm.PeerIDs() {
-		wg.Add(1)
-		peerAddrTarget := h.pm.Peers()[peerId]
-		fmt.Println("send:", peerAddrTarget)
-		peerReply, err := SendToPeer(h.pm.Host, PeerArgs{
-			peerAddrTarget,
-			"TssService",
-			"RegisterDKG",
-			PingArgs{
-				Data: []byte(hash),
-			},
-		}, &wg)
-
-		if err != nil {
-			fmt.Println("send err", err)
-			return err
+	result, err := h.tssCaller.RegisterDKG(pm, hash, RpcToPeer(pm, "TssPeerService", "RegisterDKG", []byte(hash)))
+	if err == nil {
+		pubkey := crypto.CompressPubkey(result.PublicKey.ToPubKey())
+		reply.Data = tss.DkgReply{
+			X:       hex.EncodeToString(result.PublicKey.GetX().Bytes()),
+			Y:       hex.EncodeToString(result.PublicKey.GetY().Bytes()),
+			Address: crypto.PubkeyToAddress(*result.PublicKey.ToPubKey()).String(),
+			Pubkey:  hex.EncodeToString(pubkey),
 		}
-		fmt.Println("reply:", peerReply)
 	}
 
-	wg.Wait()
-
-	go service.Process()
-	return nil
+	return err
 }
 
 func (h *RpcService) Reshare(_ *http.Request, args *RpcDataArgs, reply *RpcDataReply) error {
@@ -102,50 +77,11 @@ func (h *RpcService) Reshare(_ *http.Request, args *RpcDataArgs, reply *RpcDataR
 	if err != nil {
 		return err
 	}
+
 	reply.Data = dataShare.Hash
-	signerCfg, err := h.badgerFsm.GetSignerConfig(dataShare.Hash, dataShare.Pubkey)
-	if err != nil {
-		log.Error("GetSignerConfig", "err", err)
-		return err
-	}
-
 	pm := h.pm.ClonePeerManager(peer.GetProtocol(dataShare.Hash))
-	service, err := NewReshareService(&config.ReshareConfig{
-		Threshold: 2,
-		Share:     signerCfg.Share,
-		Pubkey:    signerCfg.Pubkey,
-		BKs:       signerCfg.BKs,
-	}, pm, &pm.Host, dataShare.Hash, h.badgerFsm)
-	if err != nil {
-		log.Error("NewDkgService", "err", err)
-		return err
-	}
-	var wg sync.WaitGroup
 
-	for _, peerId := range h.pm.PeerIDs() {
-		wg.Add(1)
-		peerAddrTarget := h.pm.Peers()[peerId]
-		fmt.Println("send:", peerAddrTarget)
-		peerReply, err := SendToPeer(h.pm.Host, PeerArgs{
-			peerAddrTarget,
-			"TssService",
-			"Reshare",
-			PingArgs{
-				Data: argData,
-			},
-		}, &wg)
-
-		if err != nil {
-			fmt.Println("send err", err)
-			return err
-		}
-		fmt.Println("reply:", peerReply)
-	}
-
-	wg.Wait()
-
-	go service.Process()
-	return nil
+	return h.tssCaller.Reshare(pm, &dataShare, RpcToPeer(pm, "TssPeerService", "Reshare", argData))
 }
 
 func (h *RpcService) GetKey(_ *http.Request, args *RpcKeyArgs, reply *RpcDataReply) error {

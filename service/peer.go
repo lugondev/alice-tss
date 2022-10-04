@@ -33,13 +33,13 @@ type PingArgs struct {
 type PingReply struct {
 }
 
-type TssService struct {
+type TssPeerService struct {
 	Pm        *peer.P2PManager
 	BadgerFsm *peer.BadgerFSM
 	TssCaller *TssCaller
 }
 
-func (t *TssService) SignMessage(_ context.Context, args PingArgs, _ *PingReply) error {
+func (t *TssPeerService) SignMessage(_ context.Context, args PingArgs, _ *PingReply) error {
 	log.Info("RPC server", "SignMessage", "called", "args", args)
 	var signRequest tss.SignRequest
 	err := UnmarshalRequest(args.Data, &signRequest)
@@ -50,10 +50,11 @@ func (t *TssService) SignMessage(_ context.Context, args PingArgs, _ *PingReply)
 	hash := utils.ToHexHash([]byte(signRequest.Message))
 	pm := t.Pm.ClonePeerManager(peer.GetProtocol(hash))
 
-	return t.TssCaller.SignMessage(pm, &signRequest, nil)
+	_, err = t.TssCaller.SignMessage(pm, &signRequest, nil)
+	return err
 }
 
-func (t *TssService) Reshare(_ context.Context, args PingArgs, _ *PingReply) error {
+func (t *TssPeerService) Reshare(_ context.Context, args PingArgs, _ *PingReply) error {
 	log.Info("RPC server", "Reshare", "called", "args", args)
 	var reshareRequest tss.ReshareRequest
 	err := UnmarshalRequest(args.Data, &reshareRequest)
@@ -85,25 +86,13 @@ func (t *TssService) Reshare(_ context.Context, args PingArgs, _ *PingReply) err
 	return nil
 }
 
-func (t *TssService) RegisterDKG(_ context.Context, argType PingArgs, _ *PingReply) error {
+func (t *TssPeerService) RegisterDKG(_ context.Context, argType PingArgs, _ *PingReply) error {
 	log.Info("RegisterDKG")
 
-	cfg := &config.DKGConfig{
-		Rank:      0,
-		Threshold: t.Pm.NumPeers(),
-	}
-
 	pm := t.Pm.ClonePeerManager(peer.GetProtocol(string(argType.Data)))
-	service, err := NewDkgService(cfg, pm, &pm.Host, string(argType.Data), t.BadgerFsm)
-	if err != nil {
-		log.Error("NewDkgService", "err", err)
-		return err
-	}
+	_, err := t.TssCaller.RegisterDKG(pm, string(argType.Data), nil)
 
-	log.Info("Stream Test", "service process", "called")
-	go service.Process()
-
-	return nil
+	return err
 }
 
 func MsgToPeer(client host.Host, data PeerArgs) (*PingReply, error) {

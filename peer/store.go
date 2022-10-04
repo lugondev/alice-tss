@@ -18,7 +18,7 @@ import (
 // SaveDKGResultData save dkg result data
 func (fsm BadgerFSM) SaveDKGResultData(hash string, result *dkg.Result) error {
 	pubkey := crypto.CompressPubkey(result.PublicKey.ToPubKey())
-	log.Info("SaveDKGResultData", "hash", hash, "pubkey", hex.EncodeToString(pubkey))
+	//log.Info("SaveDKGResultData", "hash", hash, "pubkey", hex.EncodeToString(pubkey))
 
 	encryptedShare, err := utils.Encrypt(
 		common.Bytes2Hex(result.Share.Bytes()),
@@ -84,7 +84,7 @@ func (fsm BadgerFSM) UpdateDKGResultData(hash string, result *reshare.Result) er
 
 // SaveSignerResultData save cmd result data
 func (fsm BadgerFSM) SaveSignerResultData(hash string, result config.RVSignature) error {
-	log.Info("SaveSignerResultData", "hash", hash, "result", result)
+	//log.Info("SaveSignerResultData", "hash", hash, "result", result)
 
 	err := fsm.Set(hash, result)
 	if err != nil {
