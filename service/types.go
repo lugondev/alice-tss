@@ -3,34 +3,17 @@ package service
 import (
 	"alice-tss/config"
 	"alice-tss/peer"
-	"github.com/libp2p/go-libp2p/core/host"
 )
 
 type RpcService struct {
-	pm         *peer.P2PManager
-	hostClient host.Host
-	config     *config.AppConfig
-	badgerFsm  *peer.BadgerFSM
+	pm        *peer.P2PManager
+	config    *config.AppConfig
+	badgerFsm *peer.BadgerFSM
+	tssCaller *TssCaller
 }
 
 type RpcDataArgs struct {
 	Data interface{}
-}
-
-type DataRequestSign struct {
-	Hash    string `json:"hash"`
-	Pubkey  string `json:"pubkey"`
-	Message string `json:"message"`
-}
-
-type DataReshare struct {
-	Hash   string `json:"hash"`
-	Pubkey string `json:"pubkey"`
-}
-
-type DataSignatureByPubkey struct {
-	Message string `json:"message"`
-	Pubkey  string `json:"pubkey"`
 }
 
 type RpcKeyArgs struct {

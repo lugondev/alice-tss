@@ -1,8 +1,9 @@
 package service
 
 import (
+	"alice-tss/pb/tss"
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -35,55 +36,44 @@ type PingReply struct {
 type TssService struct {
 	Pm        *peer.P2PManager
 	BadgerFsm *peer.BadgerFSM
+	TssCaller *TssCaller
 }
 
 func (t *TssService) SignMessage(_ context.Context, args PingArgs, _ *PingReply) error {
 	log.Info("RPC server", "SignMessage", "called", "args", args)
-	var data DataRequestSign
-	err := json.Unmarshal(args.Data, &data)
+	var signRequest tss.SignRequest
+	err := UnmarshalRequest(args.Data, &signRequest)
 	if err != nil {
-		return err
-	}
-	hash := utils.ToHexHash([]byte(data.Message))
-	signerCfg, err := t.BadgerFsm.GetSignerConfig(data.Hash, data.Pubkey)
-	if err != nil {
-		log.Error("GetSignerConfig", "err", err)
-		return err
+		return errors.New("invalid message, cannot unmarshal")
 	}
 
+	hash := utils.ToHexHash([]byte(signRequest.Message))
 	pm := t.Pm.ClonePeerManager(peer.GetProtocol(hash))
-	service, err := NewSignerService(signerCfg, pm, t.BadgerFsm, &pm.Host, data.Message)
-	if err != nil {
-		log.Error("NewSignerService", "err", err)
-		return err
-	}
 
-	log.Info("Stream Test", "service process", "called")
-	go service.Process()
-
-	return nil
+	return t.TssCaller.SignMessage(pm, &signRequest, nil)
 }
 
 func (t *TssService) Reshare(_ context.Context, args PingArgs, _ *PingReply) error {
 	log.Info("RPC server", "Reshare", "called", "args", args)
-	var data DataReshare
-	err := json.Unmarshal(args.Data, &data)
+	var reshareRequest tss.ReshareRequest
+	err := UnmarshalRequest(args.Data, &reshareRequest)
 	if err != nil {
-		return err
+		return errors.New("invalid message, cannot unmarshal")
 	}
-	signerCfg, err := t.BadgerFsm.GetSignerConfig(data.Hash, data.Pubkey)
+
+	signerCfg, err := t.BadgerFsm.GetSignerConfig(reshareRequest.Hash, reshareRequest.Pubkey)
 	if err != nil {
 		log.Error("GetSignerConfig", "err", err)
 		return err
 	}
 
-	pm := t.Pm.ClonePeerManager(peer.GetProtocol(data.Hash))
+	pm := t.Pm.ClonePeerManager(peer.GetProtocol(reshareRequest.Hash))
 	service, err := NewReshareService(&config.ReshareConfig{
 		Threshold: 2,
 		Share:     signerCfg.Share,
 		Pubkey:    signerCfg.Pubkey,
 		BKs:       signerCfg.BKs,
-	}, pm, &pm.Host, data.Hash, t.BadgerFsm)
+	}, pm, &pm.Host, reshareRequest.Hash, t.BadgerFsm)
 	if err != nil {
 		log.Error("NewSignerService", "err", err)
 		return err

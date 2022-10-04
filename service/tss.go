@@ -1,0 +1,78 @@
+package service
+
+import (
+	"alice-tss/config"
+	"alice-tss/pb/tss"
+	"alice-tss/peer"
+	"github.com/getamis/sirius/log"
+)
+
+type TssCaller struct {
+	BadgerFsm *peer.BadgerFSM
+}
+
+func (t *TssCaller) SignMessage(pm *peer.P2PManager, signRequest *tss.SignRequest, call2peer func() error) error {
+
+	signerCfg, err := t.BadgerFsm.GetSignerConfig(signRequest.Hash, signRequest.Pubkey)
+	if err != nil {
+		log.Error("GetSignerConfig", "err", err)
+		return err
+	}
+
+	service, err := NewSignerService(signerCfg, pm, t.BadgerFsm, &pm.Host, signRequest.Message)
+	if err != nil {
+		log.Error("NewSignerService", "err", err)
+		return err
+	}
+	if call2peer != nil {
+		if err := call2peer(); err != nil {
+			return err
+		}
+	}
+	log.Info("Stream Test", "service process", "called")
+	go service.Process()
+
+	return nil
+}
+
+func (t *TssCaller) Reshare(pm *peer.P2PManager, reshareRequest *tss.ReshareRequest) error {
+	signerCfg, err := t.BadgerFsm.GetSignerConfig(reshareRequest.Hash, reshareRequest.Pubkey)
+	if err != nil {
+		log.Error("GetSignerConfig", "err", err)
+		return err
+	}
+
+	service, err := NewReshareService(&config.ReshareConfig{
+		Threshold: 2,
+		Share:     signerCfg.Share,
+		Pubkey:    signerCfg.Pubkey,
+		BKs:       signerCfg.BKs,
+	}, pm, &pm.Host, reshareRequest.Hash, t.BadgerFsm)
+	if err != nil {
+		log.Error("NewSignerService", "err", err)
+		return err
+	}
+
+	log.Info("Stream Test", "service process", "called")
+	go service.Process()
+
+	return nil
+}
+
+func (t *TssCaller) RegisterDKG(pm *peer.P2PManager, hash string) error {
+	cfg := &config.DKGConfig{
+		Rank:      0,
+		Threshold: pm.NumPeers(),
+	}
+
+	service, err := NewDkgService(cfg, pm, &pm.Host, hash, t.BadgerFsm)
+	if err != nil {
+		log.Error("NewDkgService", "err", err)
+		return err
+	}
+
+	log.Info("Stream Test", "service process", "called")
+	go service.Process()
+
+	return nil
+}

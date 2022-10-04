@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 
 	"github.com/dgraph-io/badger"
 	"github.com/getamis/sirius/log"
-	"github.com/gorilla/mux"
 	gorpc "github.com/libp2p/go-libp2p-gorpc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -79,6 +79,7 @@ var Cmd = &cobra.Command{
 		svc := service.TssService{
 			Pm:        pm,
 			BadgerFsm: badgerFsm,
+			TssCaller: &service.TssCaller{BadgerFsm: badgerFsm},
 		}
 
 		if err := rpcHost.Register(&svc); err != nil {
@@ -92,6 +93,8 @@ var Cmd = &cobra.Command{
 		if port != 0 {
 			rpcPort = port
 		}
+
+		go service.StartGRPC(rpcPort+1000, pm, badgerFsm)
 		if err := service.InitRouter(rpcPort, mux.NewRouter(), pm, badgerFsm); err != nil {
 			log.Crit("init router", "err", err)
 		}

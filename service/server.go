@@ -13,13 +13,15 @@ import (
 	rpcjson "github.com/gorilla/rpc/v2/json2"
 
 	"alice-tss/config"
+	"alice-tss/pb/tss"
 	"alice-tss/peer"
 	"alice-tss/utils"
 )
 
 func (h *RpcService) SignMessage(_ *http.Request, args *RpcDataArgs, reply *RpcDataReply) error {
 	log.Info("RPC server", "SignMessage", "called", "args", args)
-	var dataRequestSign DataRequestSign
+
+	var dataRequestSign tss.SignRequest
 	argData, err := json.Marshal(args.Data)
 	if err != nil {
 		return err
@@ -29,48 +31,11 @@ func (h *RpcService) SignMessage(_ *http.Request, args *RpcDataArgs, reply *RpcD
 		return err
 	}
 
-	signerCfg, err := h.badgerFsm.GetSignerConfig(dataRequestSign.Hash, dataRequestSign.Pubkey)
-	if err != nil {
-		log.Error("GetSignerConfig", "err", err)
-		return err
-	}
-
 	hash := utils.ToHexHash([]byte(dataRequestSign.Message))
-	reply.Data = hash
 	pm := h.pm.ClonePeerManager(peer.GetProtocol(hash))
+	reply.Data = hash
 
-	service, err := NewSignerService(signerCfg, pm, h.badgerFsm, &pm.Host, dataRequestSign.Message)
-	if err != nil {
-		log.Error("NewSignerService", "err", err)
-		return err
-	}
-
-	var wg sync.WaitGroup
-
-	for _, peerId := range pm.PeerIDs() {
-		wg.Add(1)
-		peerAddrTarget := pm.Peers()[peerId]
-		fmt.Println("send:", peerAddrTarget)
-		peerReply, err := SendToPeer(pm.Host, PeerArgs{
-			peerAddrTarget,
-			"TssService",
-			"SignMessage",
-			PingArgs{
-				Data: argData,
-			},
-		}, &wg)
-
-		if err != nil {
-			fmt.Println("send err", err)
-			return err
-		}
-		fmt.Println("reply:", peerReply)
-	}
-
-	wg.Wait()
-
-	go service.Process()
-	return nil
+	return h.tssCaller.SignMessage(pm, &dataRequestSign, RpcToPeer(pm, "TssService", "SignMessage", argData))
 }
 
 func (h *RpcService) RegisterDKG(_ *http.Request, _ *RpcDataArgs, reply *RpcDataReply) error {
@@ -128,7 +93,7 @@ func (h *RpcService) RegisterDKG(_ *http.Request, _ *RpcDataArgs, reply *RpcData
 func (h *RpcService) Reshare(_ *http.Request, args *RpcDataArgs, reply *RpcDataReply) error {
 	log.Info("RPC server", "Reshare", "called", "args", args)
 
-	var dataShare DataReshare
+	var dataShare tss.ReshareRequest
 	argData, err := json.Marshal(args.Data)
 	if err != nil {
 		return err
@@ -208,7 +173,7 @@ func (h *RpcService) GetDKG(_ *http.Request, args *RpcKeyArgs, reply *RpcDataRep
 func (h *RpcService) CheckSignature(_ *http.Request, args *RpcDataArgs, reply *RpcDataReply) error {
 	log.Info("RPC server", "CheckSignature", "called", "args", args)
 
-	var dataSignature DataSignatureByPubkey
+	var dataSignature tss.CheckSignatureByPubkeyRequest
 	argData, err := json.Marshal(args.Data)
 	if err != nil {
 		return err
@@ -247,12 +212,14 @@ func (h *RpcService) CheckSignature(_ *http.Request, args *RpcDataArgs, reply *R
 }
 
 func InitRouter(port int, r *mux.Router, pm *peer.P2PManager, badgerFsm *peer.BadgerFSM) error {
+	log.Info("init router rpc", "port", port)
 	rpcServer := rpc.NewServer()
 	rpcServer.RegisterCodec(rpcjson.NewCodec(), "application/json")
 
 	err := rpcServer.RegisterService(&RpcService{
 		pm:        pm,
 		badgerFsm: badgerFsm,
+		tssCaller: &TssCaller{BadgerFsm: badgerFsm},
 	}, "signer")
 	if err != nil {
 		log.Crit("start service service failed", "err", err)
