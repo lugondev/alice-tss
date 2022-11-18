@@ -1,7 +1,8 @@
-package service
+package server
 
 import (
 	"alice-tss/pb/tss"
+	"alice-tss/service"
 	"context"
 	"errors"
 	"fmt"
@@ -69,7 +70,7 @@ func (t *TssPeerService) Reshare(_ context.Context, args PingArgs, _ *PingReply)
 	}
 
 	pm := t.Pm.ClonePeerManager(peer.GetProtocol(reshareRequest.Hash))
-	service, err := NewReshareService(&config.ReshareConfig{
+	service, err := service.NewReshareService(&config.ReshareConfig{
 		Threshold: 2,
 		Share:     signerCfg.Share,
 		Pubkey:    signerCfg.Pubkey,

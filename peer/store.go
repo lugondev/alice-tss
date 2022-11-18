@@ -18,7 +18,7 @@ import (
 // SaveDKGResultData save dkg result data
 func (fsm BadgerFSM) SaveDKGResultData(hash string, result *dkg.Result) error {
 	pubkey := crypto.CompressPubkey(result.PublicKey.ToPubKey())
-	//log.Info("SaveDKGResultData", "hash", hash, "pubkey", hex.EncodeToString(pubkey))
+	log.Info("SaveDKGResultData", "hash", hash, "pubkey", hex.EncodeToString(pubkey))
 
 	encryptedShare, err := utils.Encrypt(
 		common.Bytes2Hex(result.Share.Bytes()),

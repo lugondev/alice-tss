@@ -75,7 +75,7 @@ func (p *ReshareService) Handle(s network.Stream) {
 	}
 
 	log.Info("Received request", "from", s.Conn().RemotePeer())
-	err = p.reshare.AddMessage(data)
+	err = p.reshare.AddMessage(data.GetId(), data)
 	if err != nil {
 		log.Warn("Cannot add message to reshare", "err", err)
 		return
@@ -106,7 +106,7 @@ func (p *ReshareService) OnStateChanged(oldState types.MainState, newState types
 		if err == nil {
 			//log.Info("reshare", "result", result)
 			if err := p.fsm.UpdateDKGResultData(p.hash, result); err != nil {
-				log.Error("Cannot update DKG result data", "err", err)
+				log.Error("Cannot reshare DKG result data", "err", err)
 				return
 			}
 		} else {

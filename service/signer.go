@@ -5,6 +5,7 @@ import (
 	"alice-tss/peer"
 	"alice-tss/utils"
 	"encoding/hex"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/getamis/alice/crypto/homo/paillier"
 	"github.com/getamis/alice/crypto/tss/ecdsa/gg18/signer"
 	"github.com/getamis/alice/types"
@@ -71,7 +72,9 @@ func (p *SignerService) createSigner(msg string) error {
 	}
 
 	log.Info("Signer created", "msg", msg)
-	newSigner, err := signer.NewSigner(p.pm, dkgResult.PublicKey, newPaillier, dkgResult.Share, dkgResult.Bks, []byte(msg), p)
+	//byteMessage := []byte(msg)
+	byteMessage := common.Hex2Bytes(msg)
+	newSigner, err := signer.NewSigner(p.pm, dkgResult.PublicKey, newPaillier, dkgResult.Share, dkgResult.Bks, byteMessage, p)
 	if err != nil {
 		log.Warn("Cannot create a new cmd", "err", err)
 		return err
@@ -104,7 +107,7 @@ func (p *SignerService) Handle(s network.Stream) {
 	}
 
 	log.Info("Received request", "from", s.Conn().RemotePeer())
-	err = p.signer.AddMessage(data)
+	err = p.signer.AddMessage(data.GetId(), data)
 	if err != nil {
 		log.Warn("Cannot add message to cmd", "err", err)
 		return
@@ -145,7 +148,7 @@ func (p *SignerService) OnStateChanged(oldState types.MainState, newState types.
 				S:    hex.EncodeToString(result.S.Bytes()),
 				Hash: p.hash,
 			}); err != nil {
-				log.Error("Cannot save dkg result", "err", err)
+				log.Error("Cannot save sign result", "err", err)
 				return
 			}
 		} else {

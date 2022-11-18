@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"alice-tss/server"
 	"fmt"
 	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v2"
@@ -15,7 +16,6 @@ import (
 
 	"alice-tss/config"
 	"alice-tss/peer"
-	"alice-tss/service"
 	"alice-tss/utils"
 )
 
@@ -76,10 +76,10 @@ var Cmd = &cobra.Command{
 		}
 
 		rpcHost := gorpc.NewServer(host, peer.ProtocolId)
-		svc := service.TssPeerService{
+		svc := server.TssPeerService{
 			Pm:        pm,
 			BadgerFsm: badgerFsm,
-			TssCaller: &service.TssCaller{BadgerFsm: badgerFsm},
+			TssCaller: &server.TssCaller{BadgerFsm: badgerFsm},
 		}
 
 		if err := rpcHost.Register(&svc); err != nil {
@@ -94,8 +94,8 @@ var Cmd = &cobra.Command{
 			rpcPort = port
 		}
 
-		go service.StartGRPC(rpcPort+1000, pm, badgerFsm)
-		if err := service.InitRouter(rpcPort, mux.NewRouter(), pm, badgerFsm); err != nil {
+		go server.StartGRPC(rpcPort+1000, pm, badgerFsm)
+		if err := server.InitRouter(rpcPort, mux.NewRouter(), pm, badgerFsm); err != nil {
 			log.Crit("init router", "err", err)
 		}
 
