@@ -1,6 +1,7 @@
 package server
 
 import (
+	"alice-tss/types"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,13 +12,19 @@ import (
 	rpcjson "github.com/gorilla/rpc/v2/json2"
 	"net/http"
 
-	"alice-tss/config"
 	"alice-tss/pb/tss"
 	"alice-tss/peer"
 	"alice-tss/utils"
 )
 
-func (h *RpcService) SignMessage(_ *http.Request, args *RpcDataArgs, reply *RpcDataReply) error {
+type RpcService struct {
+	pm        *peer.P2PManager
+	config    *types.AppConfig
+	badgerFsm *peer.BadgerFSM
+	tssCaller *TssCaller
+}
+
+func (h *RpcService) SignMessage(_ *http.Request, args *types.RpcDataArgs, reply *types.RpcDataReply) error {
 	log.Info("RPC server", "SignMessage", "called", "args", args)
 
 	var dataRequestSign tss.SignRequest
@@ -35,7 +42,7 @@ func (h *RpcService) SignMessage(_ *http.Request, args *RpcDataArgs, reply *RpcD
 
 	result, err := h.tssCaller.SignMessage(pm, &dataRequestSign, RpcToPeer(pm, "TssPeerService", "SignMessage", argData))
 	if err == nil {
-		reply.Data = config.RVSignature{
+		reply.Data = types.RVSignature{
 			R:    hex.EncodeToString(result.R.Bytes()),
 			S:    hex.EncodeToString(result.S.Bytes()),
 			Hash: hash,
@@ -45,7 +52,7 @@ func (h *RpcService) SignMessage(_ *http.Request, args *RpcDataArgs, reply *RpcD
 	return err
 }
 
-func (h *RpcService) RegisterDKG(_ *http.Request, _ *RpcDataArgs, reply *RpcDataReply) error {
+func (h *RpcService) RegisterDKG(_ *http.Request, _ *types.RpcDataArgs, reply *types.RpcDataReply) error {
 	log.Info("RPC server", "RegisterDKG", "called")
 
 	hash := utils.RandomHash()
@@ -65,7 +72,7 @@ func (h *RpcService) RegisterDKG(_ *http.Request, _ *RpcDataArgs, reply *RpcData
 	return err
 }
 
-func (h *RpcService) Reshare(_ *http.Request, args *RpcDataArgs, reply *RpcDataReply) error {
+func (h *RpcService) Reshare(_ *http.Request, args *types.RpcDataArgs, reply *types.RpcDataReply) error {
 	log.Info("RPC server", "Reshare", "called", "args", args)
 
 	var dataShare tss.ReshareRequest
@@ -84,7 +91,7 @@ func (h *RpcService) Reshare(_ *http.Request, args *RpcDataArgs, reply *RpcDataR
 	return h.tssCaller.Reshare(pm, &dataShare, RpcToPeer(pm, "TssPeerService", "Reshare", argData))
 }
 
-func (h *RpcService) GetKey(_ *http.Request, args *RpcKeyArgs, reply *RpcDataReply) error {
+func (h *RpcService) GetKey(_ *http.Request, args *types.RpcKeyArgs, reply *types.RpcDataReply) error {
 	log.Info("RPC server", "GetKey", args)
 
 	data, err := h.badgerFsm.Get(args.Key)
@@ -95,7 +102,7 @@ func (h *RpcService) GetKey(_ *http.Request, args *RpcKeyArgs, reply *RpcDataRep
 	return nil
 }
 
-func (h *RpcService) GetDKG(_ *http.Request, args *RpcKeyArgs, reply *RpcDataReply) error {
+func (h *RpcService) GetDKG(_ *http.Request, args *types.RpcKeyArgs, reply *types.RpcDataReply) error {
 	log.Info("RPC server", "GetKey", args)
 
 	data, err := h.badgerFsm.GetDKGResultData(args.Key)
@@ -106,7 +113,7 @@ func (h *RpcService) GetDKG(_ *http.Request, args *RpcKeyArgs, reply *RpcDataRep
 	return nil
 }
 
-func (h *RpcService) CheckSignature(_ *http.Request, args *RpcDataArgs, reply *RpcDataReply) error {
+func (h *RpcService) CheckSignature(_ *http.Request, args *types.RpcDataArgs, reply *types.RpcDataReply) error {
 	log.Info("RPC server", "CheckSignature", "called", "args", args)
 
 	var dataSignature tss.CheckSignatureByPubkeyRequest
@@ -130,7 +137,7 @@ func (h *RpcService) CheckSignature(_ *http.Request, args *RpcDataArgs, reply *R
 		return err
 	}
 
-	var rvSignature config.RVSignature
+	var rvSignature types.RVSignature
 	rvsData, err := json.Marshal(data)
 	if err != nil {
 		return err

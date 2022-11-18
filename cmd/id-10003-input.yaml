@@ -1,4 +1,0 @@
-port: 10003
-rpc: 1236
-
-badger-dir: "./node.test/badger3"

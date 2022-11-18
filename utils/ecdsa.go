@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"alice-tss/config"
+	"alice-tss/types"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"math/big"
@@ -18,7 +18,7 @@ type ResponseCheckSignature struct {
 	Address     string `json:"address"`
 }
 
-func CheckSignatureECDSA(msg string, signature config.RVSignature, pubkey string) (*ResponseCheckSignature, error) {
+func CheckSignatureECDSA(msg string, signature types.RVSignature, pubkey string) (*ResponseCheckSignature, error) {
 	rBig := big.NewInt(0).SetBytes(common.FromHex(signature.R))
 	sBig := big.NewInt(0).SetBytes(common.FromHex(signature.S))
 

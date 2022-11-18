@@ -1,6 +1,7 @@
 package service
 
 import (
+	types2 "alice-tss/types"
 	"github.com/getamis/alice/crypto/tss/ecdsa/gg18/reshare"
 	"github.com/getamis/alice/types"
 	"github.com/getamis/sirius/log"
@@ -9,13 +10,12 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"io"
 
-	"alice-tss/config"
 	"alice-tss/peer"
 	"alice-tss/utils"
 )
 
-type ReshareService struct {
-	config *config.ReshareConfig
+type Reshare struct {
+	config *types2.ReshareConfig
 	pm     types.PeerManager
 	fsm    *peer.BadgerFSM
 
@@ -26,8 +26,8 @@ type ReshareService struct {
 	hostClient *host.Host
 }
 
-func NewReshareService(config *config.ReshareConfig, pm types.PeerManager, hostClient *host.Host, hash string, badgerFsm *peer.BadgerFSM) (*ReshareService, error) {
-	s := &ReshareService{
+func NewReshareService(config *types2.ReshareConfig, pm types.PeerManager, hostClient *host.Host, hash string, badgerFsm *peer.BadgerFSM) (*Reshare, error) {
+	s := &Reshare{
 		config: config,
 		pm:     pm,
 		fsm:    badgerFsm,
@@ -58,7 +58,7 @@ func NewReshareService(config *config.ReshareConfig, pm types.PeerManager, hostC
 	return s, nil
 }
 
-func (p *ReshareService) Handle(s network.Stream) {
+func (p *Reshare) Handle(s network.Stream) {
 	data := &reshare.Message{}
 	buf, err := io.ReadAll(s)
 	if err != nil {
@@ -82,7 +82,7 @@ func (p *ReshareService) Handle(s network.Stream) {
 	}
 }
 
-func (p *ReshareService) Process() {
+func (p *Reshare) Process() {
 	// 1. Start a reshare process.
 	p.reshare.Start()
 	defer p.reshare.Stop()
@@ -90,12 +90,12 @@ func (p *ReshareService) Process() {
 	// 2. Wait reshare is done or failed
 	<-p.done
 }
-func (p *ReshareService) closeDone() {
+func (p *Reshare) closeDone() {
 	close(p.done)
 	(*p.hostClient).RemoveStreamHandler(peer.GetProtocol(p.hash))
 }
 
-func (p *ReshareService) OnStateChanged(oldState types.MainState, newState types.MainState) {
+func (p *Reshare) OnStateChanged(oldState types.MainState, newState types.MainState) {
 	if newState == types.StateFailed {
 		log.Error("Reshare failed", "old", oldState.String(), "new", newState.String())
 		p.closeDone()

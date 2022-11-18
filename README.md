@@ -249,7 +249,7 @@ rpc: 1234
 badger-dir: "./node.test/badger1"
 ```
 ```sh
-> ./cmd/tss start --config ./cmd/id-10001-input.yaml --keystore ./node.test/keystore/1
+> ./cmd/tss start --config ./cmd/id-10001-input.yml --keystore ./node.test/keystore/1
 ```
 
 On node B,
@@ -261,7 +261,7 @@ rpc: 1235
 badger-dir: "./node.test/badger2"
 ```
 ```sh
-> ./cmd/tss start --config ./cmd/id-10002-input.yaml --keystore ./node.test/keystore/2
+> ./cmd/tss start --config ./cmd/id-10002-input.yml --keystore ./node.test/keystore/2
 ```
 
 On node C,
@@ -273,5 +273,5 @@ rpc: 1236
 badger-dir: "./node.test/badger3"
 ```
 ```sh
-> ./cmd/tss start --config ./cmd/id-10003-input.yaml --keystore ./node.test/keystore/3
+> ./cmd/tss start --config ./cmd/id-10003-input.yml --keystore ./node.test/keystore/3
 ```

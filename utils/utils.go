@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"alice-tss/types"
 	"crypto/ecdsa"
 	cryptoElliptic "crypto/elliptic"
 	"encoding/hex"
@@ -18,8 +19,6 @@ import (
 	"github.com/getamis/alice/crypto/elliptic"
 	"github.com/getamis/alice/crypto/tss/dkg"
 	"github.com/getamis/sirius/log"
-
-	"alice-tss/config"
 )
 
 var (
@@ -34,7 +33,7 @@ func GetCurve() elliptic.Curve {
 }
 
 // ConvertDKGResult converts DKG result from config.
-func ConvertDKGResult(cfgPubkey config.Pubkey, cfgShare string, cfgBKs map[string]config.BK) (*dkg.Result, error) {
+func ConvertDKGResult(cfgPubkey types.Pubkey, cfgShare string, cfgBKs map[string]types.BK) (*dkg.Result, error) {
 	// Build public key.
 	x, ok := new(big.Int).SetString(cfgPubkey.X, 10)
 	if !ok {

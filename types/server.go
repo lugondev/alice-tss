@@ -1,16 +1,4 @@
-package server
-
-import (
-	"alice-tss/config"
-	"alice-tss/peer"
-)
-
-type RpcService struct {
-	pm        *peer.P2PManager
-	config    *config.AppConfig
-	badgerFsm *peer.BadgerFSM
-	tssCaller *TssCaller
-}
+package types
 
 type RpcDataArgs struct {
 	Data interface{}

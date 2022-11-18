@@ -1,8 +1,8 @@
 package service
 
 import (
-	"alice-tss/config"
 	"alice-tss/peer"
+	types2 "alice-tss/types"
 	"alice-tss/utils"
 	"encoding/hex"
 	"github.com/ethereum/go-ethereum/common"
@@ -16,8 +16,8 @@ import (
 	"io"
 )
 
-type SignerService struct {
-	config *config.SignerConfig
+type Signer struct {
+	config *types2.SignerConfig
 	pm     types.PeerManager
 	fsm    *peer.BadgerFSM
 
@@ -29,13 +29,13 @@ type SignerService struct {
 }
 
 func NewSignerService(
-	config *config.SignerConfig,
+	config *types2.SignerConfig,
 	pm types.PeerManager,
 	badgerFsm *peer.BadgerFSM,
 	hostClient *host.Host,
 	msg string,
-) (*SignerService, error) {
-	s := &SignerService{
+) (*Signer, error) {
+	s := &Signer{
 		config: config,
 		pm:     pm,
 		fsm:    badgerFsm,
@@ -57,7 +57,7 @@ func NewSignerService(
 	return s, nil
 }
 
-func (p *SignerService) createSigner(msg string) error {
+func (p *Signer) createSigner(msg string) error {
 	// For simplicity, we use Paillier algorithm in cmd.
 	newPaillier, err := paillier.NewPaillier(2048)
 	if err != nil {
@@ -84,11 +84,11 @@ func (p *SignerService) createSigner(msg string) error {
 	return nil
 }
 
-func (p *SignerService) GetResult() (*signer.Result, error) {
+func (p *Signer) GetResult() (*signer.Result, error) {
 	return p.signer.GetResult()
 }
 
-func (p *SignerService) Handle(s network.Stream) {
+func (p *Signer) Handle(s network.Stream) {
 	if p.signer == nil {
 		log.Warn("Signer is not created")
 		return
@@ -114,7 +114,7 @@ func (p *SignerService) Handle(s network.Stream) {
 	}
 }
 
-func (p *SignerService) Process() {
+func (p *Signer) Process() {
 	// 1. Start a cmd process.
 	p.signer.Start()
 	log.Info("Signer process", "action", "start")
@@ -127,12 +127,12 @@ func (p *SignerService) Process() {
 	<-p.done
 }
 
-func (p *SignerService) closeDone() {
+func (p *Signer) closeDone() {
 	close(p.done)
 	(*p.hostClient).RemoveStreamHandler(peer.GetProtocol(p.hash))
 }
 
-func (p *SignerService) OnStateChanged(oldState types.MainState, newState types.MainState) {
+func (p *Signer) OnStateChanged(oldState types.MainState, newState types.MainState) {
 	if newState == types.StateFailed {
 		log.Error("Signer failed", "old", oldState.String(), "new", newState.String())
 		p.closeDone()
@@ -143,7 +143,7 @@ func (p *SignerService) OnStateChanged(oldState types.MainState, newState types.
 		if err == nil {
 			//log.Info("signed", "result", result)
 
-			if err := p.fsm.SaveSignerResultData(p.hash, config.RVSignature{
+			if err := p.fsm.SaveSignerResultData(p.hash, types2.RVSignature{
 				R:    hex.EncodeToString(result.R.Bytes()),
 				S:    hex.EncodeToString(result.S.Bytes()),
 				Hash: p.hash,

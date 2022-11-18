@@ -1,7 +1,7 @@
 package peer
 
 import (
-	"alice-tss/config"
+	"alice-tss/types"
 	"alice-tss/utils"
 	"crypto/ecdsa"
 	"encoding/hex"
@@ -30,18 +30,18 @@ func (fsm BadgerFSM) SaveDKGResultData(hash string, result *dkg.Result) error {
 		return err
 	}
 
-	data := &config.DKGResult{
+	data := &types.DKGResult{
 		Address:   crypto.PubkeyToAddress(*result.PublicKey.ToPubKey()),
 		Share:     encryptedShare,
 		PublicKey: hex.EncodeToString(pubkey),
-		BKs:       map[string]config.BK{},
-		Pubkey: config.Pubkey{
+		BKs:       map[string]types.BK{},
+		Pubkey: types.Pubkey{
 			X: hex.EncodeToString(result.PublicKey.GetX().Bytes()),
 			Y: hex.EncodeToString(result.PublicKey.GetY().Bytes()),
 		},
 	}
 	for s, parameter := range result.Bks {
-		data.BKs[s] = config.BK{
+		data.BKs[s] = types.BK{
 			X:    parameter.GetX().String(),
 			Rank: parameter.GetRank(),
 		}
@@ -83,7 +83,7 @@ func (fsm BadgerFSM) UpdateDKGResultData(hash string, result *reshare.Result) er
 }
 
 // SaveSignerResultData save cmd result data
-func (fsm BadgerFSM) SaveSignerResultData(hash string, result config.RVSignature) error {
+func (fsm BadgerFSM) SaveSignerResultData(hash string, result types.RVSignature) error {
 	//log.Info("SaveSignerResultData", "hash", hash, "result", result)
 
 	err := fsm.Set(hash, result)
@@ -94,13 +94,13 @@ func (fsm BadgerFSM) SaveSignerResultData(hash string, result config.RVSignature
 }
 
 // GetDKGResultData get dkg result data
-func (fsm BadgerFSM) GetDKGResultData(hash string) (*config.DKGResult, error) {
+func (fsm BadgerFSM) GetDKGResultData(hash string) (*types.DKGResult, error) {
 	data, err := fsm.Get(hash)
 	log.Info("GetDKGResultData", "hash", hash, "data", data)
 	if err != nil {
 		return nil, err
 	}
-	var result config.DKGResult
+	var result types.DKGResult
 	byteData, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (fsm BadgerFSM) GetDKGResultData(hash string) (*config.DKGResult, error) {
 }
 
 // GetSignerConfig get cmd config
-func (fsm BadgerFSM) GetSignerConfig(hash, pubkey string) (*config.SignerConfig, error) {
+func (fsm BadgerFSM) GetSignerConfig(hash, pubkey string) (*types.SignerConfig, error) {
 	log.Info("GetSignerConfig", "hash", hash, "pubkey", pubkey)
 
 	resultDKG, err := fsm.GetDKGResultData(hash)
@@ -133,9 +133,9 @@ func (fsm BadgerFSM) GetSignerConfig(hash, pubkey string) (*config.SignerConfig,
 		return nil, err
 	}
 
-	signerCfg := &config.SignerConfig{
+	signerCfg := &types.SignerConfig{
 		Share: big.NewInt(0).SetBytes(common.FromHex(share)).String(),
-		Pubkey: config.Pubkey{
+		Pubkey: types.Pubkey{
 			X: big.NewInt(0).SetBytes(common.FromHex(resultDKG.Pubkey.X)).String(),
 			Y: big.NewInt(0).SetBytes(common.FromHex(resultDKG.Pubkey.Y)).String(),
 		},

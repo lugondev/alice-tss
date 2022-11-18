@@ -1,6 +1,7 @@
 package service
 
 import (
+	types2 "alice-tss/types"
 	"github.com/getamis/alice/crypto/tss/dkg"
 	"github.com/getamis/alice/types"
 	"github.com/getamis/sirius/log"
@@ -9,13 +10,12 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"io"
 
-	"alice-tss/config"
 	"alice-tss/peer"
 	"alice-tss/utils"
 )
 
-type DkgService struct {
-	config *config.DKGConfig
+type Dkg struct {
+	config *types2.DKGConfig
 	pm     types.PeerManager
 	fsm    *peer.BadgerFSM
 
@@ -26,8 +26,8 @@ type DkgService struct {
 	hostClient *host.Host
 }
 
-func NewDkgService(config *config.DKGConfig, pm types.PeerManager, hostClient *host.Host, hash string, badgerFsm *peer.BadgerFSM) (*DkgService, error) {
-	s := &DkgService{
+func NewDkgService(config *types2.DKGConfig, pm types.PeerManager, hostClient *host.Host, hash string, badgerFsm *peer.BadgerFSM) (*Dkg, error) {
+	s := &Dkg{
 		config: config,
 		pm:     pm,
 		fsm:    badgerFsm,
@@ -53,11 +53,11 @@ func NewDkgService(config *config.DKGConfig, pm types.PeerManager, hostClient *h
 	return s, nil
 }
 
-func (p *DkgService) GetResult() (*dkg.Result, error) {
+func (p *Dkg) GetResult() (*dkg.Result, error) {
 	return p.dkg.GetResult()
 }
 
-func (p *DkgService) Handle(s network.Stream) {
+func (p *Dkg) Handle(s network.Stream) {
 	data := &dkg.Message{}
 	buf, err := io.ReadAll(s)
 	if err != nil {
@@ -81,7 +81,7 @@ func (p *DkgService) Handle(s network.Stream) {
 	}
 }
 
-func (p *DkgService) Process() {
+func (p *Dkg) Process() {
 	// 1. Start a DKG process.
 	p.dkg.Start()
 	defer p.dkg.Stop()
@@ -90,12 +90,12 @@ func (p *DkgService) Process() {
 	<-p.done
 }
 
-func (p *DkgService) closeDone() {
+func (p *Dkg) closeDone() {
 	close(p.done)
 	(*p.hostClient).RemoveStreamHandler(peer.GetProtocol(p.hash))
 }
 
-func (p *DkgService) OnStateChanged(oldState types.MainState, newState types.MainState) {
+func (p *Dkg) OnStateChanged(oldState types.MainState, newState types.MainState) {
 	if newState == types.StateFailed {
 		log.Error("Dkg failed", "old", oldState.String(), "new", newState.String())
 		close(p.done)

@@ -1,4 +1,4 @@
-package cmd_test
+package main_test
 
 import (
 	"alice-tss/pb/tss"

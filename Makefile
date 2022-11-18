@@ -1,4 +1,3 @@
-GOROOT := $(shell go env GOROOT)
 DIRS := \
 	$(TOOL_BIN_DIR) \
 	$(TOOL_TEMP_DIR)
@@ -32,3 +31,6 @@ tss:
 	go build -o cmd/tss main.go
 
 .PHONY: $(PHONY)
+
+node-1-test:
+	go run main.go --config config/id-10002-input.yaml  --keystore ./node.test/keystore/2

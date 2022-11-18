@@ -1,10 +1,11 @@
 package server
 
 import (
-	"alice-tss/config"
 	"alice-tss/pb/tss"
 	"alice-tss/peer"
-	service2 "alice-tss/service"
+	tssService "alice-tss/service"
+	"alice-tss/types"
+
 	"github.com/getamis/alice/crypto/tss/dkg"
 	"github.com/getamis/alice/crypto/tss/ecdsa/gg18/signer"
 	"github.com/getamis/sirius/log"
@@ -21,7 +22,7 @@ func (t *TssCaller) SignMessage(pm *peer.P2PManager, signRequest *tss.SignReques
 		return nil, err
 	}
 
-	service, err := service2.NewSignerService(signerCfg, pm, t.BadgerFsm, &pm.Host, signRequest.Message)
+	service, err := tssService.NewSignerService(signerCfg, pm, t.BadgerFsm, &pm.Host, signRequest.Message)
 	if err != nil {
 		log.Error("NewSignerService", "err", err)
 		return nil, err
@@ -46,7 +47,7 @@ func (t *TssCaller) Reshare(pm *peer.P2PManager, reshareRequest *tss.ReshareRequ
 		return err
 	}
 
-	service, err := service2.NewReshareService(&config.ReshareConfig{
+	service, err := tssService.NewReshareService(&types.ReshareConfig{
 		Threshold: 2,
 		Share:     signerCfg.Share,
 		Pubkey:    signerCfg.Pubkey,
@@ -69,12 +70,12 @@ func (t *TssCaller) Reshare(pm *peer.P2PManager, reshareRequest *tss.ReshareRequ
 }
 
 func (t *TssCaller) RegisterDKG(pm *peer.P2PManager, hash string, call2peer func() error) (*dkg.Result, error) {
-	cfg := &config.DKGConfig{
+	cfg := &types.DKGConfig{
 		Rank:      0,
 		Threshold: pm.NumPeers(),
 	}
 
-	service, err := service2.NewDkgService(cfg, pm, &pm.Host, hash, t.BadgerFsm)
+	service, err := tssService.NewDkgService(cfg, pm, &pm.Host, hash, t.BadgerFsm)
 	if err != nil {
 		log.Error("NewDkgService", "err", err)
 		return nil, err

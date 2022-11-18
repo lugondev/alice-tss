@@ -3,6 +3,7 @@ package server
 import (
 	"alice-tss/pb/tss"
 	"alice-tss/service"
+	"alice-tss/types"
 	"context"
 	"errors"
 	"fmt"
@@ -15,7 +16,6 @@ import (
 	libp2pPeer "github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 
-	"alice-tss/config"
 	"alice-tss/peer"
 	"alice-tss/utils"
 )
@@ -70,7 +70,7 @@ func (t *TssPeerService) Reshare(_ context.Context, args PingArgs, _ *PingReply)
 	}
 
 	pm := t.Pm.ClonePeerManager(peer.GetProtocol(reshareRequest.Hash))
-	service, err := service.NewReshareService(&config.ReshareConfig{
+	service, err := service.NewReshareService(&types.ReshareConfig{
 		Threshold: 2,
 		Share:     signerCfg.Share,
 		Pubkey:    signerCfg.Pubkey,
