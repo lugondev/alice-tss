@@ -36,7 +36,6 @@ type PingReply struct {
 
 type TssPeerService struct {
 	Pm        *peer.P2PManager
-	BadgerFsm *peer.BadgerFSM
 	TssCaller *TssCaller
 }
 
@@ -63,7 +62,7 @@ func (t *TssPeerService) Reshare(_ context.Context, args PingArgs, _ *PingReply)
 		return errors.New("invalid message, cannot unmarshal")
 	}
 
-	signerCfg, err := t.BadgerFsm.GetSignerConfig(reshareRequest.Hash, reshareRequest.Pubkey)
+	signerCfg, err := t.TssCaller.StoreDB.GetSignerConfig(reshareRequest.Hash, reshareRequest.Pubkey)
 	if err != nil {
 		log.Error("GetSignerConfig", "err", err)
 		return err
@@ -75,7 +74,7 @@ func (t *TssPeerService) Reshare(_ context.Context, args PingArgs, _ *PingReply)
 		Share:     signerCfg.Share,
 		Pubkey:    signerCfg.Pubkey,
 		BKs:       signerCfg.BKs,
-	}, pm, pm.Host, reshareRequest.Hash, t.BadgerFsm)
+	}, pm, pm.Host, reshareRequest.Hash, t.TssCaller.StoreDB)
 	if err != nil {
 		log.Error("NewSignerService", "err", err)
 		return err

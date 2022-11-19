@@ -12,17 +12,17 @@ import (
 )
 
 type TssCaller struct {
-	BadgerFsm *peer.BadgerFSM
+	StoreDB types.StoreDB
 }
 
 func (t *TssCaller) SignMessage(pm *peer.P2PManager, signRequest *pb.SignRequest, call2peer func() error) (*signer.Result, error) {
-	signerCfg, err := t.BadgerFsm.GetSignerConfig(signRequest.Hash, signRequest.Pubkey)
+	signerCfg, err := t.StoreDB.GetSignerConfig(signRequest.Hash, signRequest.Pubkey)
 	if err != nil {
 		log.Error("GetSignerConfig", "err", err)
 		return nil, err
 	}
 
-	service, err := tssService.NewSignerService(signerCfg, pm, t.BadgerFsm, pm.Host, signRequest.Message)
+	service, err := tssService.NewSignerService(signerCfg, pm, t.StoreDB, pm.Host, signRequest.Message)
 	if err != nil {
 		log.Error("NewSignerService", "err", err)
 		return nil, err
@@ -41,7 +41,7 @@ func (t *TssCaller) SignMessage(pm *peer.P2PManager, signRequest *pb.SignRequest
 }
 
 func (t *TssCaller) Reshare(pm *peer.P2PManager, reshareRequest *pb.ReshareRequest, call2peer func() error) error {
-	signerCfg, err := t.BadgerFsm.GetSignerConfig(reshareRequest.Hash, reshareRequest.Pubkey)
+	signerCfg, err := t.StoreDB.GetSignerConfig(reshareRequest.Hash, reshareRequest.Pubkey)
 	if err != nil {
 		log.Error("GetSignerConfig", "err", err)
 		return err
@@ -52,7 +52,7 @@ func (t *TssCaller) Reshare(pm *peer.P2PManager, reshareRequest *pb.ReshareReque
 		Share:     signerCfg.Share,
 		Pubkey:    signerCfg.Pubkey,
 		BKs:       signerCfg.BKs,
-	}, pm, pm.Host, reshareRequest.Hash, t.BadgerFsm)
+	}, pm, pm.Host, reshareRequest.Hash, t.StoreDB)
 	if err != nil {
 		log.Error("NewReshareService", "err", err)
 		return err
@@ -76,7 +76,7 @@ func (t *TssCaller) RegisterDKG(pm *peer.P2PManager, hash string, call2peer func
 		Threshold: pm.NumPeers(),
 	}
 
-	service, err := tssService.NewDkgService(cfg, pm, pm.Host, hash, t.BadgerFsm)
+	service, err := tssService.NewDkgService(cfg, pm, pm.Host, hash, t.StoreDB)
 	if err != nil {
 		log.Error("NewDkgService", "err", err)
 		return nil, err

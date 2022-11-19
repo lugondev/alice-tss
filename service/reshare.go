@@ -15,9 +15,9 @@ import (
 )
 
 type Reshare struct {
-	config *types2.ReshareConfig
-	pm     types.PeerManager
-	fsm    *peer.BadgerFSM
+	config  *types2.ReshareConfig
+	pm      types.PeerManager
+	storeDB types2.StoreDB
 
 	reshare *reshare.Reshare
 	done    chan struct{}
@@ -26,12 +26,12 @@ type Reshare struct {
 	hostClient host.Host
 }
 
-func NewReshareService(config *types2.ReshareConfig, pm types.PeerManager, hostClient host.Host, hash string, badgerFsm *peer.BadgerFSM) (*Reshare, error) {
+func NewReshareService(config *types2.ReshareConfig, pm types.PeerManager, hostClient host.Host, hash string, storeDb types2.StoreDB) (*Reshare, error) {
 	s := &Reshare{
-		config: config,
-		pm:     pm,
-		fsm:    badgerFsm,
-		done:   make(chan struct{}),
+		config:  config,
+		pm:      pm,
+		storeDB: storeDb,
+		done:    make(chan struct{}),
 	}
 
 	// Reshare needs results from DKG.
@@ -103,16 +103,17 @@ func (p *Reshare) OnStateChanged(oldState types.MainState, newState types.MainSt
 	} else if newState == types.StateDone {
 		log.Info("Reshare done", "old", oldState.String(), "new", newState.String())
 		result, err := p.reshare.GetResult()
+		p.closeDone()
+
 		if err == nil {
-			//log.Info("reshare", "result", result)
-			if err := p.fsm.UpdateDKGResultData(p.hash, result); err != nil {
+			log.Debug("reshare", "result", result)
+			if err := p.storeDB.UpdateDKGResultData(p.hash, result); err != nil {
 				log.Error("Cannot reshare DKG result data", "err", err)
 				return
 			}
 		} else {
 			log.Warn("Failed to get result from reshare", "err", err)
 		}
-		p.closeDone()
 		return
 	}
 	log.Info("State changed", "old", oldState.String(), "new", newState.String())

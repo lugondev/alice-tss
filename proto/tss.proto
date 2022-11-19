@@ -38,6 +38,7 @@ message DkgReply {
   string y = 2;
   string pubkey = 3;
   string address = 4;
+  string hash = 5;
 }
 
 message CheckSignatureByPubkeyRequest {

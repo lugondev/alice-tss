@@ -2,14 +2,11 @@ package main
 
 import (
 	"alice-tss/server"
+	"alice-tss/store"
 	"alice-tss/types"
 	"flag"
-	"fmt"
-	"github.com/gorilla/mux"
-	"os"
-
-	"github.com/dgraph-io/badger"
 	"github.com/getamis/sirius/log"
+	"github.com/gorilla/mux"
 	gorpc "github.com/libp2p/go-libp2p-gorpc"
 	"github.com/spf13/viper"
 
@@ -50,19 +47,21 @@ func main() {
 		log.Crit("Failed to add peers", "err", err)
 	}
 
-	log.Info("badger dir", "dir", appConfig.Badger)
-	badgerOpt := badger.DefaultOptions(appConfig.Badger)
-	badgerDB, err := badger.Open(badgerOpt)
-	if err != nil {
-		panic(err)
-	}
-
-	defer func() {
-		if err := badgerDB.Close(); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "error close badgerDB: %s\n", err.Error())
-		}
-	}()
-	badgerFsm := peer.NewBadger(badgerDB, privateKey)
+	//log.Info("badger dir", "dir", appConfig.Badger)
+	//badgerOpt := badger.DefaultOptions(appConfig.Badger)
+	//badgerDB, err := badger.Open(badgerOpt)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//defer func() {
+	//	if err := badgerDB.Close(); err != nil {
+	//		_, _ = fmt.Fprintf(os.Stderr, "error close badgerDB: %s\n", err.Error())
+	//	}
+	//}()
+	//badgerFsm := badger2.NewBadger(badgerDB, privateKey)
+	//storeDb := badger2.NewBadgerDB(badgerFsm)
+	storeDb := store.NewMockDB()
 
 	// setup local mDNS discovery
 	if err := peer.SetupDiscovery(host, pm); err != nil {
@@ -72,8 +71,7 @@ func main() {
 	rpcHost := gorpc.NewServer(host, peer.ProtocolId)
 	svc := server.TssPeerService{
 		Pm:        pm,
-		BadgerFsm: badgerFsm,
-		TssCaller: &server.TssCaller{BadgerFsm: badgerFsm},
+		TssCaller: &server.TssCaller{StoreDB: storeDb},
 	}
 
 	if err := rpcHost.Register(&svc); err != nil {
@@ -88,8 +86,8 @@ func main() {
 		rpcPort = port
 	}
 
-	go server.StartGRPC(rpcPort+1000, pm, badgerFsm)
-	if err := server.InitRouter(rpcPort, mux.NewRouter(), pm, badgerFsm); err != nil {
+	go server.StartGRPC(rpcPort+1000, pm, storeDb)
+	if err := server.InitRouter(rpcPort, mux.NewRouter(), pm, storeDb); err != nil {
 		log.Crit("init router", "err", err)
 	}
 }

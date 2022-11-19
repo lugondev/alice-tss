@@ -1,4 +1,4 @@
-package peer
+package badger
 
 import (
 	"crypto/ecdsa"
@@ -6,13 +6,13 @@ import (
 	"github.com/dgraph-io/badger"
 )
 
-type BadgerFSM struct {
+type FSM struct {
 	db         *badger.DB
 	privateKey *ecdsa.PrivateKey
 }
 
 // Get fetch data from badgerDB
-func (fsm BadgerFSM) Get(key string) (interface{}, error) {
+func (fsm FSM) Get(key string) (interface{}, error) {
 	var keyByte = []byte(key)
 	var data interface{}
 
@@ -50,7 +50,7 @@ func (fsm BadgerFSM) Get(key string) (interface{}, error) {
 }
 
 // Set store data to badgerDB
-func (fsm BadgerFSM) Set(key string, value interface{}) error {
+func (fsm FSM) Set(key string, value interface{}) error {
 	var data = make([]byte, 0)
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -72,7 +72,7 @@ func (fsm BadgerFSM) Set(key string, value interface{}) error {
 }
 
 // SetArr store [data] to badgerDB
-func (fsm BadgerFSM) SetArr(key string, value interface{}) error {
+func (fsm FSM) SetArr(key string, value interface{}) error {
 	var data = make([]byte, 0)
 	data, err := json.Marshal([]interface{}{value})
 	if err != nil {
@@ -106,7 +106,7 @@ func (fsm BadgerFSM) SetArr(key string, value interface{}) error {
 }
 
 // Delete remove data from badgerDB
-func (fsm BadgerFSM) Delete(key string) error {
+func (fsm FSM) Delete(key string) error {
 	var keyByte = []byte(key)
 
 	txn := fsm.db.NewTransaction(true)
@@ -119,8 +119,8 @@ func (fsm BadgerFSM) Delete(key string) error {
 }
 
 // NewBadger implementation using badgerDB
-func NewBadger(badgerDB *badger.DB, privateKey *ecdsa.PrivateKey) *BadgerFSM {
-	return &BadgerFSM{
+func NewBadger(badgerDB *badger.DB, privateKey *ecdsa.PrivateKey) *FSM {
+	return &FSM{
 		db:         badgerDB,
 		privateKey: privateKey,
 	}

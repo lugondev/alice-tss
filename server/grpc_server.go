@@ -3,6 +3,8 @@ package server
 import (
 	"alice-tss/pb"
 	"alice-tss/peer"
+	"alice-tss/store/badger"
+	"alice-tss/types"
 	"alice-tss/utils"
 	"context"
 	"encoding/hex"
@@ -19,7 +21,7 @@ type grpcServer struct {
 	pb.TssServiceServer
 
 	pm        *peer.P2PManager
-	badgerFsm *peer.BadgerFSM
+	badgerFsm *badger.FSM
 	tssCaller *TssCaller
 }
 
@@ -82,7 +84,7 @@ func (s *grpcServer) Reshare(_ context.Context, reshareRequest *pb.ReshareReques
 	return &pb.ServiceReply{}, nil
 }
 
-func StartGRPC(port int, pm *peer.P2PManager, badgerFsm *peer.BadgerFSM) {
+func StartGRPC(port int, pm *peer.P2PManager, storeDB types.StoreDB) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Crit("failed to listen: %v", err)
@@ -90,8 +92,7 @@ func StartGRPC(port int, pm *peer.P2PManager, badgerFsm *peer.BadgerFSM) {
 	s := grpc.NewServer()
 	pb.RegisterTssServiceServer(s, &grpcServer{
 		pm:        pm,
-		badgerFsm: badgerFsm,
-		tssCaller: &TssCaller{BadgerFsm: badgerFsm},
+		tssCaller: &TssCaller{StoreDB: storeDB},
 	})
 
 	log.Info("server listening", "addr", lis.Addr())

@@ -20,7 +20,7 @@ import (
 type RpcService struct {
 	pm        *peer.P2PManager
 	config    *types.AppConfig
-	badgerFsm *peer.BadgerFSM
+	storeDB   types.StoreDB
 	tssCaller *TssCaller
 }
 
@@ -66,6 +66,7 @@ func (h *RpcService) RegisterDKG(_ *http.Request, _ *types.RpcDataArgs, reply *t
 			Y:       hex.EncodeToString(result.PublicKey.GetY().Bytes()),
 			Address: crypto.PubkeyToAddress(*result.PublicKey.ToPubKey()).String(),
 			Pubkey:  hex.EncodeToString(pubkey),
+			Hash:    hash,
 		}
 	}
 
@@ -91,21 +92,10 @@ func (h *RpcService) Reshare(_ *http.Request, args *types.RpcDataArgs, reply *ty
 	return h.tssCaller.Reshare(pm, &dataShare, RpcToPeer(pm, "TssPeerService", "Reshare", argData))
 }
 
-func (h *RpcService) GetKey(_ *http.Request, args *types.RpcKeyArgs, reply *types.RpcDataReply) error {
-	log.Info("RPC server", "GetKey", args)
-
-	data, err := h.badgerFsm.Get(args.Key)
-	if err != nil {
-		return err
-	}
-	reply.Data = data
-	return nil
-}
-
 func (h *RpcService) GetDKG(_ *http.Request, args *types.RpcKeyArgs, reply *types.RpcDataReply) error {
 	log.Info("RPC server", "GetKey", args)
 
-	data, err := h.badgerFsm.GetDKGResultData(args.Key)
+	data, err := h.tssCaller.StoreDB.GetDKGResultData(args.Key)
 	if err != nil {
 		return err
 	}
@@ -129,7 +119,7 @@ func (h *RpcService) CheckSignature(_ *http.Request, args *types.RpcDataArgs, re
 	hash := utils.ToHexHash([]byte(dataSignature.Message))
 	log.Info("CheckSignature", "hash", hash)
 
-	data, err := h.badgerFsm.Get(hash)
+	data, err := h.tssCaller.StoreDB.GetDKGResultData(hash)
 	if err != nil {
 		return err
 	}
@@ -154,15 +144,14 @@ func (h *RpcService) CheckSignature(_ *http.Request, args *types.RpcDataArgs, re
 	return nil
 }
 
-func InitRouter(port int, r *mux.Router, pm *peer.P2PManager, badgerFsm *peer.BadgerFSM) error {
+func InitRouter(port int, r *mux.Router, pm *peer.P2PManager, storeDB types.StoreDB) error {
 	log.Info("init router rpc", "port", port)
 	rpcServer := rpc.NewServer()
 	rpcServer.RegisterCodec(rpcjson.NewCodec(), "application/json")
 
 	err := rpcServer.RegisterService(&RpcService{
 		pm:        pm,
-		badgerFsm: badgerFsm,
-		tssCaller: &TssCaller{BadgerFsm: badgerFsm},
+		tssCaller: &TssCaller{StoreDB: storeDB},
 	}, "signer")
 	if err != nil {
 		log.Crit("start service service failed", "err", err)

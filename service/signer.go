@@ -17,9 +17,9 @@ import (
 )
 
 type Signer struct {
-	config *types2.SignerConfig
-	pm     types.PeerManager
-	fsm    *peer.BadgerFSM
+	config  *types2.SignerConfig
+	pm      types.PeerManager
+	storeDB types2.StoreDB
 
 	signer *signer.Signer
 	done   chan struct{}
@@ -31,15 +31,15 @@ type Signer struct {
 func NewSignerService(
 	config *types2.SignerConfig,
 	pm types.PeerManager,
-	badgerFsm *peer.BadgerFSM,
+	storeDB types2.StoreDB,
 	hostClient host.Host,
 	msg string,
 ) (*Signer, error) {
 	s := &Signer{
-		config: config,
-		pm:     pm,
-		fsm:    badgerFsm,
-		done:   make(chan struct{}),
+		config:  config,
+		pm:      pm,
+		storeDB: storeDB,
+		done:    make(chan struct{}),
 	}
 
 	log.Info("Service call")
@@ -72,7 +72,6 @@ func (p *Signer) createSigner(msg string) error {
 	}
 
 	log.Info("Signer created", "msg", msg)
-	//byteMessage := []byte(msg)
 	byteMessage := common.Hex2Bytes(msg)
 	newSigner, err := signer.NewSigner(p.pm, dkgResult.PublicKey, newPaillier, dkgResult.Share, dkgResult.Bks, byteMessage, p)
 	if err != nil {
@@ -140,10 +139,12 @@ func (p *Signer) OnStateChanged(oldState types.MainState, newState types.MainSta
 	} else if newState == types.StateDone {
 		log.Info("Signer done", "old", oldState.String(), "new", newState.String())
 		result, err := p.signer.GetResult()
-		if err == nil {
-			//log.Info("signed", "result", result)
+		p.closeDone()
 
-			if err := p.fsm.SaveSignerResultData(p.hash, types2.RVSignature{
+		if err == nil {
+			log.Debug("signed", "result", result)
+
+			if err := p.storeDB.SaveSignerResultData(p.hash, types2.RVSignature{
 				R:    hex.EncodeToString(result.R.Bytes()),
 				S:    hex.EncodeToString(result.S.Bytes()),
 				Hash: p.hash,
@@ -154,7 +155,6 @@ func (p *Signer) OnStateChanged(oldState types.MainState, newState types.MainSta
 		} else {
 			log.Warn("Failed to get result from cmd", "err", err)
 		}
-		p.closeDone()
 		return
 	}
 	log.Info("State changed", "old", oldState.String(), "new", newState.String())

@@ -15,9 +15,9 @@ import (
 )
 
 type Dkg struct {
-	config *types2.DKGConfig
-	pm     types.PeerManager
-	fsm    *peer.BadgerFSM
+	config  *types2.DKGConfig
+	pm      types.PeerManager
+	storeDB types2.StoreDB
 
 	dkg  *dkg.DKG
 	done chan struct{}
@@ -26,12 +26,12 @@ type Dkg struct {
 	hostClient host.Host
 }
 
-func NewDkgService(config *types2.DKGConfig, pm types.PeerManager, hostClient host.Host, hash string, badgerFsm *peer.BadgerFSM) (*Dkg, error) {
+func NewDkgService(config *types2.DKGConfig, pm types.PeerManager, hostClient host.Host, hash string, storeDB types2.StoreDB) (*Dkg, error) {
 	s := &Dkg{
-		config: config,
-		pm:     pm,
-		fsm:    badgerFsm,
-		done:   make(chan struct{}),
+		config:  config,
+		pm:      pm,
+		storeDB: storeDB,
+		done:    make(chan struct{}),
 	}
 	log.Warn("new DKG", "config", config, "hash", hash)
 
@@ -106,8 +106,8 @@ func (p *Dkg) OnStateChanged(oldState types.MainState, newState types.MainState)
 		close(p.done)
 
 		if err == nil {
-			//log.Info("Register dkg", "result", result)
-			if err := p.fsm.SaveDKGResultData(p.hash, result); err != nil {
+			log.Debug("Register dkg", "result", result)
+			if err := p.storeDB.SaveDKGResultData(p.hash, result); err != nil {
 				log.Error("Cannot save dkg result", "err", err)
 				return
 			}

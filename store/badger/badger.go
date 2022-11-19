@@ -1,4 +1,4 @@
-package peer
+package badger
 
 import (
 	"alice-tss/types"
@@ -15,14 +15,18 @@ import (
 	"math/big"
 )
 
+type DB struct {
+	fsm *FSM
+}
+
 // SaveDKGResultData save dkg result data
-func (fsm BadgerFSM) SaveDKGResultData(hash string, result *dkg.Result) error {
+func (d *DB) SaveDKGResultData(hash string, result *dkg.Result) error {
 	pubkey := crypto.CompressPubkey(result.PublicKey.ToPubKey())
 	log.Info("SaveDKGResultData", "hash", hash, "pubkey", hex.EncodeToString(pubkey))
 
 	encryptedShare, err := utils.Encrypt(
 		common.Bytes2Hex(result.Share.Bytes()),
-		crypto.FromECDSA(fsm.privateKey),
+		crypto.FromECDSA(d.fsm.privateKey),
 		hex.EncodeToString(pubkey))
 
 	if err != nil {
@@ -47,7 +51,7 @@ func (fsm BadgerFSM) SaveDKGResultData(hash string, result *dkg.Result) error {
 		}
 	}
 
-	err = fsm.Set(hash, data)
+	err = d.fsm.Set(hash, data)
 	if err != nil {
 		return err
 	}
@@ -55,8 +59,8 @@ func (fsm BadgerFSM) SaveDKGResultData(hash string, result *dkg.Result) error {
 }
 
 // UpdateDKGResultData update dkg reshare data
-func (fsm BadgerFSM) UpdateDKGResultData(hash string, result *reshare.Result) error {
-	oldDkg, err := fsm.GetDKGResultData(hash)
+func (d *DB) UpdateDKGResultData(hash string, result *reshare.Result) error {
+	oldDkg, err := d.GetDKGResultData(hash)
 	if err != nil {
 		log.Error("GetDKGResultData", "err", err)
 		return err
@@ -65,7 +69,7 @@ func (fsm BadgerFSM) UpdateDKGResultData(hash string, result *reshare.Result) er
 
 	encryptedShare, err := utils.Encrypt(
 		common.Bytes2Hex(result.Share.Bytes()),
-		crypto.FromECDSA(fsm.privateKey),
+		crypto.FromECDSA(d.fsm.privateKey),
 		oldDkg.PublicKey)
 
 	if err != nil {
@@ -75,7 +79,7 @@ func (fsm BadgerFSM) UpdateDKGResultData(hash string, result *reshare.Result) er
 
 	oldDkg.Share = encryptedShare
 
-	err = fsm.Set(hash, oldDkg)
+	err = d.fsm.Set(hash, oldDkg)
 	if err != nil {
 		return err
 	}
@@ -83,10 +87,10 @@ func (fsm BadgerFSM) UpdateDKGResultData(hash string, result *reshare.Result) er
 }
 
 // SaveSignerResultData save cmd result data
-func (fsm BadgerFSM) SaveSignerResultData(hash string, result types.RVSignature) error {
+func (d *DB) SaveSignerResultData(hash string, result types.RVSignature) error {
 	//log.Info("SaveSignerResultData", "hash", hash, "result", result)
 
-	err := fsm.Set(hash, result)
+	err := d.fsm.Set(hash, result)
 	if err != nil {
 		return err
 	}
@@ -94,8 +98,8 @@ func (fsm BadgerFSM) SaveSignerResultData(hash string, result types.RVSignature)
 }
 
 // GetDKGResultData get dkg result data
-func (fsm BadgerFSM) GetDKGResultData(hash string) (*types.DKGResult, error) {
-	data, err := fsm.Get(hash)
+func (d *DB) GetDKGResultData(hash string) (*types.DKGResult, error) {
+	data, err := d.fsm.Get(hash)
 	log.Info("GetDKGResultData", "hash", hash, "data", data)
 	if err != nil {
 		return nil, err
@@ -113,10 +117,10 @@ func (fsm BadgerFSM) GetDKGResultData(hash string) (*types.DKGResult, error) {
 }
 
 // GetSignerConfig get cmd config
-func (fsm BadgerFSM) GetSignerConfig(hash, pubkey string) (*types.SignerConfig, error) {
+func (d *DB) GetSignerConfig(hash, pubkey string) (*types.SignerConfig, error) {
 	log.Info("GetSignerConfig", "hash", hash, "pubkey", pubkey)
 
-	resultDKG, err := fsm.GetDKGResultData(hash)
+	resultDKG, err := d.GetDKGResultData(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +132,7 @@ func (fsm BadgerFSM) GetSignerConfig(hash, pubkey string) (*types.SignerConfig, 
 		return nil, fmt.Errorf("pubkey not match")
 	}
 
-	share, err := utils.Decrypt(resultDKG.Share, crypto.FromECDSA(fsm.privateKey), pubkey)
+	share, err := utils.Decrypt(resultDKG.Share, crypto.FromECDSA(d.fsm.privateKey), pubkey)
 	if err != nil {
 		return nil, err
 	}
@@ -143,4 +147,8 @@ func (fsm BadgerFSM) GetSignerConfig(hash, pubkey string) (*types.SignerConfig, 
 	}
 
 	return signerCfg, nil
+}
+
+func NewBadgerDB(fsm *FSM) types.StoreDB {
+	return &DB{fsm: fsm}
 }
