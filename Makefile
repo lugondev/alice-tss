@@ -1,36 +1,35 @@
-DIRS := \
-	$(TOOL_BIN_DIR) \
-	$(TOOL_TEMP_DIR)
-export PATH := $(TOOL_BIN_DIR):$(PATH)
-include $(wildcard $(TOOL_DIR)/*.mk)
+.PHONY: migrate-up migrate-down sqlc server proto server tss init proto
 
-PROTOS := \
-	**/*.proto
+include .env
 
-$(DIRS):
-	mkdir -p $@
+PATH_CURRENT := $(shell pwd)
+PATH_BUILT := $(PATH_CURRENT)/build/server
+GIT_COMMIT_LOG := $(shell git log --oneline -1 HEAD)
 
-PHONY+= init
 init: 
 	git submodule init
 	git submodule update
 
-PHONY+= tools
-tools: $(DIRS) $(PROTOC)
-	@go install \
-		google.golang.org/protobuf/cmd/protoc-gen-go 
+migrate-up:
+	migrate -path db/migration -database "${DB_URL}" -verbose up
 
-PHONY += protobuf
-protobuf:
-	@for d in $$(find "crypto" -type f -name "*.proto"); do		\
-		protoc -I$(GOPATH)/src --go_out=$(GOPATH)/src $(CURDIR)/$$d; \
-	done;
+migrate-down:
+	migrate -path db/migration -database "${DB_URL}" -verbose down
 
-PHONY += tss
+sqlc:
+	sqlc generate
+
+server:
+	go run main.go
 tss:
 	go build -o cmd/tss main.go
 
-.PHONY: $(PHONY)
-
 node-1-test:
 	go run main.go --config config/id-10002-input.yaml  --keystore ./node.test/keystore/2
+
+proto:
+	rm -f pb/*.go
+	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative \
+	--go-grpc_out=pb --go-grpc_opt=paths=source_relative \
+	--descriptor_set_out descriptor.pb \
+	proto/*.proto

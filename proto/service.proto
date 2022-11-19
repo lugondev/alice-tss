@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+option go_package = "pb/";
+package pb;
+
+import "ping.proto";
+
+service Ping {
+  rpc Ping (PingRequest) returns (PongReply) {}
+  rpc Msg (MsgRequest) returns (MsgReply) {}
+}

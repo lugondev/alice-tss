@@ -23,10 +23,10 @@ type Reshare struct {
 	done    chan struct{}
 
 	hash       string
-	hostClient *host.Host
+	hostClient host.Host
 }
 
-func NewReshareService(config *types2.ReshareConfig, pm types.PeerManager, hostClient *host.Host, hash string, badgerFsm *peer.BadgerFSM) (*Reshare, error) {
+func NewReshareService(config *types2.ReshareConfig, pm types.PeerManager, hostClient host.Host, hash string, badgerFsm *peer.BadgerFSM) (*Reshare, error) {
 	s := &Reshare{
 		config: config,
 		pm:     pm,
@@ -51,7 +51,7 @@ func NewReshareService(config *types2.ReshareConfig, pm types.PeerManager, hostC
 	s.hostClient = hostClient
 	s.hash = hash
 
-	(*hostClient).SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
+	hostClient.SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
 		s.Handle(stream)
 	})
 
@@ -92,7 +92,7 @@ func (p *Reshare) Process() {
 }
 func (p *Reshare) closeDone() {
 	close(p.done)
-	(*p.hostClient).RemoveStreamHandler(peer.GetProtocol(p.hash))
+	p.hostClient.RemoveStreamHandler(peer.GetProtocol(p.hash))
 }
 
 func (p *Reshare) OnStateChanged(oldState types.MainState, newState types.MainState) {

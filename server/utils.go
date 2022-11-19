@@ -1,7 +1,7 @@
 package server
 
 import (
-	"alice-tss/pb/tss"
+	"alice-tss/pb"
 	"alice-tss/peer"
 	"encoding/json"
 	"errors"
@@ -12,7 +12,7 @@ import (
 )
 
 type TssRequest interface {
-	tss.SignRequest | tss.ReshareRequest | tss.DKGRequest
+	pb.SignRequest | pb.ReshareRequest | pb.DKGRequest
 }
 
 func UnmarshalRequest[T TssRequest](data []byte, request *T) error {

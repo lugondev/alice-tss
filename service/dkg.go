@@ -23,10 +23,10 @@ type Dkg struct {
 	done chan struct{}
 
 	hash       string
-	hostClient *host.Host
+	hostClient host.Host
 }
 
-func NewDkgService(config *types2.DKGConfig, pm types.PeerManager, hostClient *host.Host, hash string, badgerFsm *peer.BadgerFSM) (*Dkg, error) {
+func NewDkgService(config *types2.DKGConfig, pm types.PeerManager, hostClient host.Host, hash string, badgerFsm *peer.BadgerFSM) (*Dkg, error) {
 	s := &Dkg{
 		config: config,
 		pm:     pm,
@@ -46,7 +46,7 @@ func NewDkgService(config *types2.DKGConfig, pm types.PeerManager, hostClient *h
 	s.hostClient = hostClient
 	s.hash = hash
 
-	(*hostClient).SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
+	hostClient.SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
 		s.Handle(stream)
 	})
 
@@ -92,7 +92,7 @@ func (p *Dkg) Process() {
 
 func (p *Dkg) closeDone() {
 	close(p.done)
-	(*p.hostClient).RemoveStreamHandler(peer.GetProtocol(p.hash))
+	p.hostClient.RemoveStreamHandler(peer.GetProtocol(p.hash))
 }
 
 func (p *Dkg) OnStateChanged(oldState types.MainState, newState types.MainState) {

@@ -12,7 +12,7 @@ import (
 	rpcjson "github.com/gorilla/rpc/v2/json2"
 	"net/http"
 
-	"alice-tss/pb/tss"
+	"alice-tss/pb"
 	"alice-tss/peer"
 	"alice-tss/utils"
 )
@@ -27,7 +27,7 @@ type RpcService struct {
 func (h *RpcService) SignMessage(_ *http.Request, args *types.RpcDataArgs, reply *types.RpcDataReply) error {
 	log.Info("RPC server", "SignMessage", "called", "args", args)
 
-	var dataRequestSign tss.SignRequest
+	var dataRequestSign pb.SignRequest
 	argData, err := json.Marshal(args.Data)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (h *RpcService) RegisterDKG(_ *http.Request, _ *types.RpcDataArgs, reply *t
 	result, err := h.tssCaller.RegisterDKG(pm, hash, RpcToPeer(pm, "TssPeerService", "RegisterDKG", []byte(hash)))
 	if err == nil {
 		pubkey := crypto.CompressPubkey(result.PublicKey.ToPubKey())
-		reply.Data = tss.DkgReply{
+		reply.Data = pb.DkgReply{
 			X:       hex.EncodeToString(result.PublicKey.GetX().Bytes()),
 			Y:       hex.EncodeToString(result.PublicKey.GetY().Bytes()),
 			Address: crypto.PubkeyToAddress(*result.PublicKey.ToPubKey()).String(),
@@ -75,7 +75,7 @@ func (h *RpcService) RegisterDKG(_ *http.Request, _ *types.RpcDataArgs, reply *t
 func (h *RpcService) Reshare(_ *http.Request, args *types.RpcDataArgs, reply *types.RpcDataReply) error {
 	log.Info("RPC server", "Reshare", "called", "args", args)
 
-	var dataShare tss.ReshareRequest
+	var dataShare pb.ReshareRequest
 	argData, err := json.Marshal(args.Data)
 	if err != nil {
 		return err
@@ -116,7 +116,7 @@ func (h *RpcService) GetDKG(_ *http.Request, args *types.RpcKeyArgs, reply *type
 func (h *RpcService) CheckSignature(_ *http.Request, args *types.RpcDataArgs, reply *types.RpcDataReply) error {
 	log.Info("RPC server", "CheckSignature", "called", "args", args)
 
-	var dataSignature tss.CheckSignatureByPubkeyRequest
+	var dataSignature pb.CheckSignatureByPubkeyRequest
 	argData, err := json.Marshal(args.Data)
 	if err != nil {
 		return err

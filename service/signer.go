@@ -25,14 +25,14 @@ type Signer struct {
 	done   chan struct{}
 
 	hash       string
-	hostClient *host.Host
+	hostClient host.Host
 }
 
 func NewSignerService(
 	config *types2.SignerConfig,
 	pm types.PeerManager,
 	badgerFsm *peer.BadgerFSM,
-	hostClient *host.Host,
+	hostClient host.Host,
 	msg string,
 ) (*Signer, error) {
 	s := &Signer{
@@ -50,7 +50,7 @@ func NewSignerService(
 	s.hash = hash
 	s.hostClient = hostClient
 
-	(*hostClient).SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
+	hostClient.SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
 		s.Handle(stream)
 	})
 
@@ -129,7 +129,7 @@ func (p *Signer) Process() {
 
 func (p *Signer) closeDone() {
 	close(p.done)
-	(*p.hostClient).RemoveStreamHandler(peer.GetProtocol(p.hash))
+	p.hostClient.RemoveStreamHandler(peer.GetProtocol(p.hash))
 }
 
 func (p *Signer) OnStateChanged(oldState types.MainState, newState types.MainState) {

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "pb/";
+package pb;
+
+message PingRequest {
+}
+
+message PongReply {
+  string message = 1;
+}
+
+message MsgRequest {
+}
+
+message MsgReply {
+  string message = 1;
+}

@@ -1,7 +1,7 @@
 package main_test
 
 import (
-	"alice-tss/pb/tss"
+	"alice-tss/pb"
 	"context"
 	"log"
 	"testing"
@@ -17,9 +17,9 @@ func TestGRPCClient(t *testing.T) {
 	}
 	defer conn.Close()
 
-	client := tss.NewTssServiceClient(conn)
+	client := pb.NewTssServiceClient(conn)
 
-	bookList, err := client.SignMessage(context.Background(), &tss.SignRequest{
+	bookList, err := client.SignMessage(context.Background(), &pb.SignRequest{
 		Hash:    "0x5a73c8fb1b418fdd33985b0b3a8561243abbb5cf1af3f0a368502939e3a4d658",
 		Pubkey:  "02d890e326fc2ea4f67d8eb6dc451779836fe7a15a2643b901d342f76ba06d7674",
 		Message: "tss-service",

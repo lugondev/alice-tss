@@ -1,7 +1,7 @@
 package server
 
 import (
-	"alice-tss/pb/tss"
+	"alice-tss/pb"
 	"alice-tss/service"
 	"alice-tss/types"
 	"context"
@@ -42,7 +42,7 @@ type TssPeerService struct {
 
 func (t *TssPeerService) SignMessage(_ context.Context, args PingArgs, _ *PingReply) error {
 	log.Info("RPC server", "SignMessage", "called", "args", args)
-	var signRequest tss.SignRequest
+	var signRequest pb.SignRequest
 	err := UnmarshalRequest(args.Data, &signRequest)
 	if err != nil {
 		return errors.New("invalid message, cannot unmarshal")
@@ -57,7 +57,7 @@ func (t *TssPeerService) SignMessage(_ context.Context, args PingArgs, _ *PingRe
 
 func (t *TssPeerService) Reshare(_ context.Context, args PingArgs, _ *PingReply) error {
 	log.Info("RPC server", "Reshare", "called", "args", args)
-	var reshareRequest tss.ReshareRequest
+	var reshareRequest pb.ReshareRequest
 	err := UnmarshalRequest(args.Data, &reshareRequest)
 	if err != nil {
 		return errors.New("invalid message, cannot unmarshal")
@@ -70,19 +70,19 @@ func (t *TssPeerService) Reshare(_ context.Context, args PingArgs, _ *PingReply)
 	}
 
 	pm := t.Pm.ClonePeerManager(peer.GetProtocol(reshareRequest.Hash))
-	service, err := service.NewReshareService(&types.ReshareConfig{
+	reshare, err := service.NewReshareService(&types.ReshareConfig{
 		Threshold: 2,
 		Share:     signerCfg.Share,
 		Pubkey:    signerCfg.Pubkey,
 		BKs:       signerCfg.BKs,
-	}, pm, &pm.Host, reshareRequest.Hash, t.BadgerFsm)
+	}, pm, pm.Host, reshareRequest.Hash, t.BadgerFsm)
 	if err != nil {
 		log.Error("NewSignerService", "err", err)
 		return err
 	}
 
 	log.Info("Stream Test", "service process", "called")
-	go service.Process()
+	go reshare.Process()
 
 	return nil
 }
