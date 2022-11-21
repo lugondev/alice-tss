@@ -7,12 +7,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/dgraph-io/badger"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/getamis/alice/crypto/tss/dkg"
 	"github.com/getamis/alice/crypto/tss/ecdsa/gg18/reshare"
 	"github.com/getamis/sirius/log"
 	"math/big"
+	"os"
 )
 
 type DB struct {
@@ -149,6 +151,19 @@ func (d *DB) GetSignerConfig(hash, pubkey string) (*types.SignerConfig, error) {
 	return signerCfg, nil
 }
 
-func NewBadgerDB(fsm *FSM) types.StoreDB {
-	return &DB{fsm: fsm}
+func NewBadgerDB(badgerDir string, privateKey *ecdsa.PrivateKey) types.StoreDB {
+	log.Info("badger dir", "dir", badgerDir)
+	badgerOpt := badger.DefaultOptions(badgerDir)
+	badgerDB, err := badger.Open(badgerOpt)
+	if err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		if err := badgerDB.Close(); err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "error close badgerDB: %s\n", err.Error())
+		}
+	}()
+	badgerFsm := NewBadger(badgerDB, privateKey)
+	return &DB{fsm: badgerFsm}
 }

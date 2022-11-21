@@ -138,3 +138,10 @@ func SendToPeer(client host.Host, data PeerArgs, wg *sync.WaitGroup) (*PingReply
 		return reply, nil
 	}
 }
+
+func NewRpcServer(pm *peer.P2PManager, storeDB types.StoreDB) *TssPeerService {
+	return &TssPeerService{
+		Pm:        pm,
+		TssCaller: &TssCaller{StoreDB: storeDB},
+	}
+}

@@ -38,29 +38,12 @@ func main() {
 	if err != nil {
 		log.Crit("Failed to create a basic host", "err", err)
 	}
-
 	log.Info("peer host", "pid", pid)
 
 	// Create a new peer manager.
 	pm := peer.NewPeerManager(pid.String(), host, peer.ProtocolId)
-	if err != nil {
-		log.Crit("Failed to add peers", "err", err)
-	}
 
-	//log.Info("badger dir", "dir", appConfig.Badger)
-	//badgerOpt := badger.DefaultOptions(appConfig.Badger)
-	//badgerDB, err := badger.Open(badgerOpt)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//defer func() {
-	//	if err := badgerDB.Close(); err != nil {
-	//		_, _ = fmt.Fprintf(os.Stderr, "error close badgerDB: %s\n", err.Error())
-	//	}
-	//}()
-	//badgerFsm := badger2.NewBadger(badgerDB, privateKey)
-	//storeDb := badger2.NewBadgerDB(badgerFsm)
+	//storeDb := badger.NewBadgerDB(appConfig.Badger, privateKey)
 	storeDb := store.NewMockDB()
 
 	// setup local mDNS discovery
@@ -68,17 +51,11 @@ func main() {
 		panic(err)
 	}
 
+	rpcServer := server.NewRpcServer(pm, storeDb)
 	rpcHost := gorpc.NewServer(host, peer.ProtocolId)
-	svc := server.TssPeerService{
-		Pm:        pm,
-		TssCaller: &server.TssCaller{StoreDB: storeDb},
-	}
 
-	if err := rpcHost.Register(&svc); err != nil {
-		panic(err)
-	}
-	if err != nil {
-		log.Crit("Failed to new service", "err", err)
+	if err := rpcHost.Register(rpcServer); err != nil {
+		log.Crit("Failed to register rpc server", "err", err)
 	}
 
 	rpcPort := appConfig.RPC
