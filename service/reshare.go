@@ -6,7 +6,6 @@ import (
 	"github.com/getamis/alice/types"
 	"github.com/getamis/sirius/log"
 	"github.com/golang/protobuf/proto"
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"io"
 
@@ -18,12 +17,10 @@ type Reshare struct {
 	config  *types2.ReshareConfig
 	pm      *peer.P2PManager
 	storeDB types2.StoreDB
-
-	reshare *reshare.Reshare
 	done    chan struct{}
 
-	hash       string
-	hostClient host.Host
+	reshare *reshare.Reshare
+	hash    string
 }
 
 func NewReshareService(config *types2.ReshareConfig, pm *peer.P2PManager, hash string, storeDb types2.StoreDB) (*Reshare, error) {
@@ -91,7 +88,7 @@ func (p *Reshare) Process() {
 }
 func (p *Reshare) closeDone() {
 	close(p.done)
-	p.hostClient.RemoveStreamHandler(peer.GetProtocol(p.hash))
+	p.pm.Host.RemoveStreamHandler(peer.GetProtocol(p.hash))
 }
 
 func (p *Reshare) OnStateChanged(oldState types.MainState, newState types.MainState) {
