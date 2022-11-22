@@ -4,6 +4,7 @@ import (
 	"alice-tss/pb"
 	"alice-tss/peer"
 	tssService "alice-tss/service"
+	"alice-tss/store"
 	"alice-tss/types"
 
 	"github.com/getamis/alice/crypto/tss/dkg"
@@ -12,7 +13,7 @@ import (
 )
 
 type TssCaller struct {
-	StoreDB types.StoreDB
+	StoreDB store.HandlerData
 }
 
 func (t *TssCaller) SignMessage(pm *peer.P2PManager, signRequest *pb.SignRequest, call2peer func() error) (*signer.Result, error) {

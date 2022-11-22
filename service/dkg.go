@@ -1,6 +1,7 @@
 package service
 
 import (
+	"alice-tss/store"
 	types2 "alice-tss/types"
 	"github.com/getamis/alice/crypto/tss/dkg"
 	"github.com/getamis/alice/types"
@@ -17,14 +18,14 @@ import (
 type Dkg struct {
 	config  *types2.DKGConfig
 	pm      *peer.P2PManager
-	storeDB types2.StoreDB
+	storeDB store.HandlerData
 	done    chan struct{}
 
 	dkg  *dkg.DKG
 	hash string
 }
 
-func NewDkgService(config *types2.DKGConfig, pm *peer.P2PManager, hash string, storeDB types2.StoreDB) (*Dkg, error) {
+func NewDkgService(config *types2.DKGConfig, pm *peer.P2PManager, hash string, storeDB store.HandlerData) (*Dkg, error) {
 	s := &Dkg{
 		config:  config,
 		pm:      pm,

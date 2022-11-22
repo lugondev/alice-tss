@@ -2,6 +2,7 @@ package service
 
 import (
 	"alice-tss/peer"
+	"alice-tss/store"
 	types2 "alice-tss/types"
 	"alice-tss/utils"
 	"encoding/hex"
@@ -18,7 +19,7 @@ import (
 type Signer struct {
 	config  *types2.SignerConfig
 	pm      *peer.P2PManager
-	storeDB types2.StoreDB
+	storeDB store.HandlerData
 	done    chan struct{}
 
 	signer *signer.Signer
@@ -28,7 +29,7 @@ type Signer struct {
 func NewSignerService(
 	config *types2.SignerConfig,
 	pm *peer.P2PManager,
-	storeDB types2.StoreDB,
+	storeDB store.HandlerData,
 	msg string,
 ) (*Signer, error) {
 	s := &Signer{

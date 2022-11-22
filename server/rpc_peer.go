@@ -3,6 +3,7 @@ package server
 import (
 	"alice-tss/pb"
 	"alice-tss/service"
+	"alice-tss/store"
 	"alice-tss/types"
 	"context"
 	"errors"
@@ -139,7 +140,7 @@ func SendToPeer(client host.Host, data PeerArgs, wg *sync.WaitGroup) (*PingReply
 	}
 }
 
-func NewRpcServer(pm *peer.P2PManager, storeDB types.StoreDB) *TssPeerService {
+func NewRpcServer(pm *peer.P2PManager, storeDB store.HandlerData) *TssPeerService {
 	return &TssPeerService{
 		Pm:        pm,
 		TssCaller: &TssCaller{StoreDB: storeDB},

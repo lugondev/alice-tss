@@ -1,6 +1,7 @@
 package service
 
 import (
+	"alice-tss/store"
 	types2 "alice-tss/types"
 	"github.com/getamis/alice/crypto/tss/ecdsa/gg18/reshare"
 	"github.com/getamis/alice/types"
@@ -16,14 +17,14 @@ import (
 type Reshare struct {
 	config  *types2.ReshareConfig
 	pm      *peer.P2PManager
-	storeDB types2.StoreDB
+	storeDB store.HandlerData
 	done    chan struct{}
 
 	reshare *reshare.Reshare
 	hash    string
 }
 
-func NewReshareService(config *types2.ReshareConfig, pm *peer.P2PManager, hash string, storeDb types2.StoreDB) (*Reshare, error) {
+func NewReshareService(config *types2.ReshareConfig, pm *peer.P2PManager, hash string, storeDb store.HandlerData) (*Reshare, error) {
 	s := &Reshare{
 		config:  config,
 		pm:      pm,

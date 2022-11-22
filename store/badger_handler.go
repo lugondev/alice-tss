@@ -1,4 +1,4 @@
-package badger
+package store
 
 import (
 	"alice-tss/types"
@@ -159,7 +159,7 @@ func (d *badgerDB) Defer() {
 	}
 }
 
-func NewBadgerDB(badgerDir string, privateKey *ecdsa.PrivateKey) types.StoreDB {
+func NewBadgerDB(badgerDir string, privateKey *ecdsa.PrivateKey) HandlerData {
 	log.Info("badger dir", "dir", badgerDir)
 	badgerOpt := badger.DefaultOptions(badgerDir).
 		WithCompactL0OnClose(true)

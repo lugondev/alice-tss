@@ -1,3 +1,6 @@
 port: 10001
 rpc: 1234
-badger: "./node.test/badger1"
+
+store:
+  type: "badger"
+  path: "./node.test/badger1"

@@ -43,9 +43,11 @@ func main() {
 	// Create a new peer manager.
 	pm := peer.NewPeerManager(pid.String(), host, peer.ProtocolId)
 
-	//storeDb := badger.NewBadgerDB(appConfig.Badger, privateKey)
-	//defer storeDb.Defer()
-	storeDb := store.NewMockDB()
+	storeDb, err := store.NewStoreHandler(appConfig.Store, privateKey)
+	if err != nil {
+		log.Crit("Failed to create a store handler", "err", err)
+	}
+	defer storeDb.Defer()
 
 	var selfService *server.SelfService = nil
 	if selfHost {

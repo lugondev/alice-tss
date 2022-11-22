@@ -41,3 +41,9 @@ type ReshareConfig struct {
 type ReshareResult struct {
 	Share string `json:"share"`
 }
+
+type RVSignature struct {
+	R    string `json:"r"`
+	S    string `json:"s"`
+	Hash string `json:"hash"`
+}

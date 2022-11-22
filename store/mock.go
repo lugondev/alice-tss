@@ -92,7 +92,7 @@ func (d *MockDB) Defer() {
 }
 
 // NewMockDB implementation using mock
-func NewMockDB() types.StoreDB {
+func NewMockDB() HandlerData {
 	dkgResults = map[string]*types.DKGResult{}
 	signerConfigs = make(map[string]*types.SignerConfig)
 

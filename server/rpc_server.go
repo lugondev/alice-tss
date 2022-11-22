@@ -3,6 +3,7 @@ package server
 import (
 	"alice-tss/pb"
 	"alice-tss/peer"
+	"alice-tss/store"
 	"alice-tss/types"
 	"alice-tss/utils"
 	"encoding/hex"
@@ -21,7 +22,7 @@ import (
 type RpcService struct {
 	pm          *peer.P2PManager
 	config      *types.AppConfig
-	storeDB     types.StoreDB
+	storeDB     store.HandlerData
 	selfService *SelfService
 	tssCaller   *TssCaller
 }
@@ -220,7 +221,7 @@ func (h *RpcService) CheckSignature(_ *http.Request, args *types.RpcDataArgs, re
 	return nil
 }
 
-func InitRouter(config *types.AppConfig, pm *peer.P2PManager, storeDB types.StoreDB, selfService *SelfService) error {
+func InitRouter(config *types.AppConfig, pm *peer.P2PManager, storeDB store.HandlerData, selfService *SelfService) error {
 	log.Info("init router rpc", "port", config.RPC)
 	rpcServer := rpc.NewServer()
 	rpcServer.RegisterCodec(rpcjson.NewCodec(), "application/json")
