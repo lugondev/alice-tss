@@ -11,7 +11,6 @@ import (
 	"github.com/getamis/alice/types"
 	"github.com/getamis/sirius/log"
 	"github.com/golang/protobuf/proto"
-	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"io"
 )
@@ -20,12 +19,10 @@ type Signer struct {
 	config  *types2.SignerConfig
 	pm      *peer.P2PManager
 	storeDB types2.StoreDB
+	done    chan struct{}
 
 	signer *signer.Signer
-	done   chan struct{}
-
-	hash       string
-	hostClient host.Host
+	hash   string
 }
 
 func NewSignerService(
@@ -126,7 +123,7 @@ func (p *Signer) Process() {
 
 func (p *Signer) closeDone() {
 	close(p.done)
-	p.hostClient.RemoveStreamHandler(peer.GetProtocol(p.hash))
+	p.pm.Host.RemoveStreamHandler(peer.GetProtocol(p.hash))
 }
 
 func (p *Signer) OnStateChanged(oldState types.MainState, newState types.MainState) {

@@ -48,23 +48,29 @@ func (s *SelfService) SignMessage(tssCaller *TssCaller, dataRequestSign *pb.Sign
 	pms := s.CreatePm(hash)
 
 	go func() {
-		dataRequestSignX := dataRequestSign
-		dataRequestSignX.Hash = fmt.Sprintf("%s-%d", hash, 1)
-		if _, err := tssCaller.SignMessage(pms[1], dataRequestSignX, nil); err != nil {
+		if _, err := tssCaller.SignMessage(pms[1], &pb.SignRequest{
+			Hash:    fmt.Sprintf("%s-%d", dataRequestSign.Hash, 1),
+			Pubkey:  dataRequestSign.Pubkey,
+			Message: dataRequestSign.Message,
+		}, nil); err != nil {
 			log.Error("RPC server 2", "SelfSignMessage 2", err)
 		}
 	}()
 	go func() {
-		dataRequestSignX := dataRequestSign
-		dataRequestSignX.Hash = fmt.Sprintf("%s-%d", hash, 2)
-		if _, err := tssCaller.SignMessage(pms[2], dataRequestSignX, nil); err != nil {
+		if _, err := tssCaller.SignMessage(pms[2], &pb.SignRequest{
+			Hash:    fmt.Sprintf("%s-%d", dataRequestSign.Hash, 2),
+			Pubkey:  dataRequestSign.Pubkey,
+			Message: dataRequestSign.Message,
+		}, nil); err != nil {
 			log.Error("RPC server 3", "SelfSignMessage 3", err)
 		}
 	}()
 
-	dataRequestSignX := dataRequestSign
-	dataRequestSignX.Hash = fmt.Sprintf("%s-%d", hash, 0)
-	return tssCaller.SignMessage(pms[0], dataRequestSignX, func() error {
+	return tssCaller.SignMessage(pms[0], &pb.SignRequest{
+		Hash:    fmt.Sprintf("%s-%d", dataRequestSign.Hash, 0),
+		Pubkey:  dataRequestSign.Pubkey,
+		Message: dataRequestSign.Message,
+	}, func() error {
 		return nil
 	})
 }
