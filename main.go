@@ -6,7 +6,6 @@ import (
 	"alice-tss/types"
 	"flag"
 	"github.com/getamis/sirius/log"
-	"github.com/gorilla/mux"
 	gorpc "github.com/libp2p/go-libp2p-gorpc"
 	"github.com/spf13/viper"
 
@@ -18,6 +17,7 @@ var configFile string
 var keystoreFile string
 var password string
 var port int
+var selfHost bool
 
 func main() {
 	flag.Parse()
@@ -44,11 +44,17 @@ func main() {
 	pm := peer.NewPeerManager(pid.String(), host, peer.ProtocolId)
 
 	//storeDb := badger.NewBadgerDB(appConfig.Badger, privateKey)
+	//defer storeDb.Defer()
 	storeDb := store.NewMockDB()
 
-	// setup local mDNS discovery
-	if err := peer.SetupDiscovery(host, pm); err != nil {
-		panic(err)
+	var selfService *server.SelfService = nil
+	if selfHost {
+		selfService = server.NewSelfService()
+	} else {
+		// setup local mDNS discovery
+		if err := peer.SetupDiscovery(pm); err != nil {
+			log.Crit("Failed to setup discovery", "err", err)
+		}
 	}
 
 	rpcServer := server.NewRpcServer(pm, storeDb)
@@ -58,13 +64,12 @@ func main() {
 		log.Crit("Failed to register rpc server", "err", err)
 	}
 
-	rpcPort := appConfig.RPC
 	if port != 0 {
-		rpcPort = port
+		appConfig.RPC = port
 	}
 
-	go server.StartGRPC(rpcPort+1000, pm, storeDb)
-	if err := server.InitRouter(rpcPort, mux.NewRouter(), pm, storeDb); err != nil {
+	//go server.StartGRPC(rpcPort+1000, pm, storeDb)
+	if err := server.InitRouter(appConfig, pm, storeDb, selfService); err != nil {
 		log.Crit("init router", "err", err)
 	}
 }
@@ -74,6 +79,7 @@ func init() {
 	flag.StringVar(&keystoreFile, "keystore", "", "keystore file path")
 	flag.StringVar(&password, "password", "111111", "password")
 	flag.IntVar(&port, "port", 0, "port server")
+	flag.BoolVar(&selfHost, "self-host", false, "run self host")
 }
 
 func readAppConfigFile() (*types.AppConfig, error) {

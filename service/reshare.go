@@ -16,7 +16,7 @@ import (
 
 type Reshare struct {
 	config  *types2.ReshareConfig
-	pm      types.PeerManager
+	pm      *peer.P2PManager
 	storeDB types2.StoreDB
 
 	reshare *reshare.Reshare
@@ -26,7 +26,7 @@ type Reshare struct {
 	hostClient host.Host
 }
 
-func NewReshareService(config *types2.ReshareConfig, pm types.PeerManager, hostClient host.Host, hash string, storeDb types2.StoreDB) (*Reshare, error) {
+func NewReshareService(config *types2.ReshareConfig, pm *peer.P2PManager, hash string, storeDb types2.StoreDB) (*Reshare, error) {
 	s := &Reshare{
 		config:  config,
 		pm:      pm,
@@ -48,10 +48,9 @@ func NewReshareService(config *types2.ReshareConfig, pm types.PeerManager, hostC
 		return nil, err
 	}
 
-	s.hostClient = hostClient
 	s.hash = hash
 
-	hostClient.SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
+	pm.Host.SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
 		s.Handle(stream)
 	})
 

@@ -34,6 +34,9 @@ func MakeBasicHost(port int64, privateKey *ecdsa.PrivateKey) (host.Host, peer.ID
 	privP256, _ := utils.ToEcdsaP256(privateKey.D.Bytes(), false)
 	cryptoPriv, _, _ := crypto.ECDSAKeyPairFromKey(privP256)
 	pid, err := peer.IDFromPrivateKey(cryptoPriv)
+	if err != nil {
+		return nil, "", err
+	}
 
 	opts := []libp2p.Option{
 		libp2p.ListenAddrs(sourceMultiAddr),
@@ -48,18 +51,31 @@ func MakeBasicHost(port int64, privateKey *ecdsa.PrivateKey) (host.Host, peer.ID
 	return basicHost, pid, nil
 }
 
-// getPeerAddr gets peer full address from port.
-func getPeerAddr(port int64) (string, error) {
-	priv, err := generateIdentity(port)
+// MakeBasicHostByID creates a LibP2P host.
+func MakeBasicHostByID(port int64) (host.Host, peer.ID, error) {
+	log.Info("MakeBasicHostByID", "port", port)
+	sourceMultiAddr, err := multiaddr.NewMultiaddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", port))
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
-	pid, err := peer.IDFromPrivateKey(priv)
+	cryptoPriv, _ := generateIdentity(port)
+	pid, err := peer.IDFromPrivateKey(cryptoPriv)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
-	return fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/%s", port, pid), nil
+
+	opts := []libp2p.Option{
+		libp2p.ListenAddrs(sourceMultiAddr),
+		libp2p.Identity(cryptoPriv),
+	}
+
+	basicHost, err := libp2p.New(opts...)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return basicHost, pid, nil
 }
 
 // generateIdentity generates a fixed key pair by using port as random source.
@@ -101,6 +117,8 @@ func send(ctx context.Context, host host.Host, target string, data interface{}, 
 
 	var s network.Stream
 	for i := 0; i < timeRetryCreateStream; i++ {
+		log.Info("NewStream", "id", info.ID, "protocol", protocol, "addr", info.Addrs, "info", info.String())
+
 		s, err = host.NewStream(ctx, info.ID, protocol)
 		if err != nil {
 			log.Warn("Try create a new stream", "after", fmt.Sprintf("%d miliseconds", delayRetryCreateStream), "to", target, "err", err)

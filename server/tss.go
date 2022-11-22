@@ -16,13 +16,15 @@ type TssCaller struct {
 }
 
 func (t *TssCaller) SignMessage(pm *peer.P2PManager, signRequest *pb.SignRequest, call2peer func() error) (*signer.Result, error) {
+	log.Info("SignMessage", "hash", signRequest.Hash, "pubkey", signRequest.Pubkey)
+
 	signerCfg, err := t.StoreDB.GetSignerConfig(signRequest.Hash, signRequest.Pubkey)
 	if err != nil {
 		log.Error("GetSignerConfig", "err", err)
 		return nil, err
 	}
 
-	service, err := tssService.NewSignerService(signerCfg, pm, t.StoreDB, pm.Host, signRequest.Message)
+	service, err := tssService.NewSignerService(signerCfg, pm, t.StoreDB, signRequest.Message)
 	if err != nil {
 		log.Error("NewSignerService", "err", err)
 		return nil, err
@@ -40,6 +42,16 @@ func (t *TssCaller) SignMessage(pm *peer.P2PManager, signRequest *pb.SignRequest
 	return nil, nil
 }
 
+func (t *TssCaller) GetSignerConfig(signRequest *pb.SignRequest) (*types.SignerConfig, error) {
+	signerCfg, err := t.StoreDB.GetSignerConfig(signRequest.Hash, signRequest.Pubkey)
+	if err != nil {
+		log.Error("GetSignerConfig", "err", err)
+		return nil, err
+	}
+
+	return signerCfg, nil
+}
+
 func (t *TssCaller) Reshare(pm *peer.P2PManager, reshareRequest *pb.ReshareRequest, call2peer func() error) error {
 	signerCfg, err := t.StoreDB.GetSignerConfig(reshareRequest.Hash, reshareRequest.Pubkey)
 	if err != nil {
@@ -52,7 +64,7 @@ func (t *TssCaller) Reshare(pm *peer.P2PManager, reshareRequest *pb.ReshareReque
 		Share:     signerCfg.Share,
 		Pubkey:    signerCfg.Pubkey,
 		BKs:       signerCfg.BKs,
-	}, pm, pm.Host, reshareRequest.Hash, t.StoreDB)
+	}, pm, reshareRequest.Hash, t.StoreDB)
 	if err != nil {
 		log.Error("NewReshareService", "err", err)
 		return err
@@ -75,8 +87,9 @@ func (t *TssCaller) RegisterDKG(pm *peer.P2PManager, hash string, call2peer func
 		Rank:      0,
 		Threshold: pm.NumPeers(),
 	}
+	log.Info("RegisterDKG", "numPeers", pm.NumPeers(), "rank", cfg.Rank)
 
-	service, err := tssService.NewDkgService(cfg, pm, pm.Host, hash, t.StoreDB)
+	service, err := tssService.NewDkgService(cfg, pm, hash, t.StoreDB)
 	if err != nil {
 		log.Error("NewDkgService", "err", err)
 		return nil, err

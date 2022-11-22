@@ -12,7 +12,7 @@ type FSM struct {
 }
 
 // Get fetch data from badgerDB
-func (fsm FSM) Get(key string) (interface{}, error) {
+func (fsm *FSM) Get(key string) (interface{}, error) {
 	var keyByte = []byte(key)
 	var data interface{}
 
@@ -50,7 +50,7 @@ func (fsm FSM) Get(key string) (interface{}, error) {
 }
 
 // Set store data to badgerDB
-func (fsm FSM) Set(key string, value interface{}) error {
+func (fsm *FSM) Set(key string, value interface{}) error {
 	var data = make([]byte, 0)
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -72,7 +72,7 @@ func (fsm FSM) Set(key string, value interface{}) error {
 }
 
 // SetArr store [data] to badgerDB
-func (fsm FSM) SetArr(key string, value interface{}) error {
+func (fsm *FSM) SetArr(key string, value interface{}) error {
 	var data = make([]byte, 0)
 	data, err := json.Marshal([]interface{}{value})
 	if err != nil {
@@ -106,7 +106,7 @@ func (fsm FSM) SetArr(key string, value interface{}) error {
 }
 
 // Delete remove data from badgerDB
-func (fsm FSM) Delete(key string) error {
+func (fsm *FSM) Delete(key string) error {
 	var keyByte = []byte(key)
 
 	txn := fsm.db.NewTransaction(true)
@@ -118,8 +118,8 @@ func (fsm FSM) Delete(key string) error {
 	return txn.Commit()
 }
 
-// NewBadger implementation using badgerDB
-func NewBadger(badgerDB *badger.DB, privateKey *ecdsa.PrivateKey) *FSM {
+// NewBadgerFSM implementation using badgerDB
+func NewBadgerFSM(badgerDB *badger.DB, privateKey *ecdsa.PrivateKey) *FSM {
 	return &FSM{
 		db:         badgerDB,
 		privateKey: privateKey,

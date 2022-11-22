@@ -18,7 +18,7 @@ import (
 
 type Signer struct {
 	config  *types2.SignerConfig
-	pm      types.PeerManager
+	pm      *peer.P2PManager
 	storeDB types2.StoreDB
 
 	signer *signer.Signer
@@ -30,9 +30,8 @@ type Signer struct {
 
 func NewSignerService(
 	config *types2.SignerConfig,
-	pm types.PeerManager,
+	pm *peer.P2PManager,
 	storeDB types2.StoreDB,
-	hostClient host.Host,
 	msg string,
 ) (*Signer, error) {
 	s := &Signer{
@@ -48,9 +47,8 @@ func NewSignerService(
 	}
 	hash := utils.ToHexHash([]byte(msg))
 	s.hash = hash
-	s.hostClient = hostClient
 
-	hostClient.SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
+	pm.Host.SetStreamHandler(peer.GetProtocol(hash), func(stream network.Stream) {
 		s.Handle(stream)
 	})
 

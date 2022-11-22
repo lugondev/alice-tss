@@ -65,8 +65,10 @@ func (p *P2PManager) SetProtocol(id protocol.ID) {
 }
 
 func (p *P2PManager) MustSend(peerID string, message interface{}) {
-	log.Info("P2PManager MustSend", "peerID", peerID, "protocol", p.protocol)
-	err := send(context.Background(), p.Host, p.peers[peerID], message, p.protocol)
+	target := p.peers[peerID]
+
+	log.Info("P2PManager MustSend", "peerID", peerID, "protocol", p.protocol, "target", target)
+	err := send(context.Background(), p.Host, target, message, p.protocol)
 	if err != nil {
 		log.Error("MustSend", "err", err, "protocol", p.protocol)
 		return
@@ -75,7 +77,7 @@ func (p *P2PManager) MustSend(peerID string, message interface{}) {
 
 // EnsureAllConnected connects the host to specified peer and sends the message to it.
 func (p *P2PManager) EnsureAllConnected() {
-	log.Info("P2PManager", "call", "EnsureAllConnected")
+	log.Info("P2PManager", "call", "EnsureAllConnected", "num peers", p.NumPeers())
 	var wg sync.WaitGroup
 	for _, peerAddr := range p.peers {
 		wg.Add(1)
@@ -86,6 +88,7 @@ func (p *P2PManager) EnsureAllConnected() {
 
 // AddPeerID adds peerID to peer list.
 func (p *P2PManager) AddPeerID(peerID peer.ID, addr string) {
+	log.Info("P2PManager AddPeerID", "id", p.Host.ID(), "peerID", peerID, "addr", addr)
 	peerAddr := fmt.Sprintf("%s/p2p/%s", addr, peerID)
 	log.Info("P2PManager", "action", "peer added", "addr", peerAddr)
 	p.peers[peerID.String()] = peerAddr

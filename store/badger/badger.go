@@ -14,15 +14,15 @@ import (
 	"github.com/getamis/alice/crypto/tss/ecdsa/gg18/reshare"
 	"github.com/getamis/sirius/log"
 	"math/big"
-	"os"
 )
 
-type DB struct {
+type badgerDB struct {
 	fsm *FSM
+	db  *badger.DB
 }
 
 // SaveDKGResultData save dkg result data
-func (d *DB) SaveDKGResultData(hash string, result *dkg.Result) error {
+func (d *badgerDB) SaveDKGResultData(hash string, result *dkg.Result) error {
 	pubkey := crypto.CompressPubkey(result.PublicKey.ToPubKey())
 	log.Info("SaveDKGResultData", "hash", hash, "pubkey", hex.EncodeToString(pubkey))
 
@@ -61,7 +61,7 @@ func (d *DB) SaveDKGResultData(hash string, result *dkg.Result) error {
 }
 
 // UpdateDKGResultData update dkg reshare data
-func (d *DB) UpdateDKGResultData(hash string, result *reshare.Result) error {
+func (d *badgerDB) UpdateDKGResultData(hash string, result *reshare.Result) error {
 	oldDkg, err := d.GetDKGResultData(hash)
 	if err != nil {
 		log.Error("GetDKGResultData", "err", err)
@@ -89,7 +89,7 @@ func (d *DB) UpdateDKGResultData(hash string, result *reshare.Result) error {
 }
 
 // SaveSignerResultData save cmd result data
-func (d *DB) SaveSignerResultData(hash string, result types.RVSignature) error {
+func (d *badgerDB) SaveSignerResultData(hash string, result types.RVSignature) error {
 	//log.Info("SaveSignerResultData", "hash", hash, "result", result)
 
 	err := d.fsm.Set(hash, result)
@@ -100,7 +100,7 @@ func (d *DB) SaveSignerResultData(hash string, result types.RVSignature) error {
 }
 
 // GetDKGResultData get dkg result data
-func (d *DB) GetDKGResultData(hash string) (*types.DKGResult, error) {
+func (d *badgerDB) GetDKGResultData(hash string) (*types.DKGResult, error) {
 	data, err := d.fsm.Get(hash)
 	log.Info("GetDKGResultData", "hash", hash, "data", data)
 	if err != nil {
@@ -119,7 +119,7 @@ func (d *DB) GetDKGResultData(hash string) (*types.DKGResult, error) {
 }
 
 // GetSignerConfig get cmd config
-func (d *DB) GetSignerConfig(hash, pubkey string) (*types.SignerConfig, error) {
+func (d *badgerDB) GetSignerConfig(hash, pubkey string) (*types.SignerConfig, error) {
 	log.Info("GetSignerConfig", "hash", hash, "pubkey", pubkey)
 
 	resultDKG, err := d.GetDKGResultData(hash)
@@ -151,19 +151,23 @@ func (d *DB) GetSignerConfig(hash, pubkey string) (*types.SignerConfig, error) {
 	return signerCfg, nil
 }
 
+func (d *badgerDB) Defer() {
+	if err := d.db.Close(); err != nil {
+		log.Error("error close badgerDB", "err", err)
+	} else {
+		log.Info("badgerDB closed")
+	}
+}
+
 func NewBadgerDB(badgerDir string, privateKey *ecdsa.PrivateKey) types.StoreDB {
 	log.Info("badger dir", "dir", badgerDir)
-	badgerOpt := badger.DefaultOptions(badgerDir)
-	badgerDB, err := badger.Open(badgerOpt)
+	badgerOpt := badger.DefaultOptions(badgerDir).
+		WithCompactL0OnClose(true)
+	db, err := badger.Open(badgerOpt)
 	if err != nil {
 		panic(err)
 	}
 
-	defer func() {
-		if err := badgerDB.Close(); err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "error close badgerDB: %s\n", err.Error())
-		}
-	}()
-	badgerFsm := NewBadger(badgerDB, privateKey)
-	return &DB{fsm: badgerFsm}
+	badgerFsm := NewBadgerFSM(db, privateKey)
+	return &badgerDB{fsm: badgerFsm, db: db}
 }

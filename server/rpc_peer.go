@@ -74,7 +74,7 @@ func (t *TssPeerService) Reshare(_ context.Context, args PingArgs, _ *PingReply)
 		Share:     signerCfg.Share,
 		Pubkey:    signerCfg.Pubkey,
 		BKs:       signerCfg.BKs,
-	}, pm, pm.Host, reshareRequest.Hash, t.TssCaller.StoreDB)
+	}, pm, reshareRequest.Hash, t.TssCaller.StoreDB)
 	if err != nil {
 		log.Error("NewSignerService", "err", err)
 		return err

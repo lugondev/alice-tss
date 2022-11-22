@@ -11,4 +11,5 @@ type StoreDB interface {
 	UpdateDKGResultData(hash string, result *reshare.Result) error
 	SaveSignerResultData(hash string, result RVSignature) error
 	GetDKGResultData(hash string) (*DKGResult, error)
+	Defer()
 }
