@@ -43,8 +43,9 @@ func TestECDSA(t *testing.T) {
 }
 
 func TestRsHex(t *testing.T) {
-	r := "88d2283b69a552f07d55dfcea994955fd61835c0f2cc9b4838010b544b209116"
-	s := "c30bcf2398e37e06e234325aa2387fa3b84a7a92b4e45d055de3284d2f7a8f58"
+	//"r":"7e535dd1f357021d5a7f03251a6e8536c0f86f1bc9a8cefa8522c02d0f8eb73d","s":"cfa84733cabaca52f84e41475e88163e7211ff01dd18aaa85af41a576b14343e"
+	r := "7e535dd1f357021d5a7f03251a6e8536c0f86f1bc9a8cefa8522c02d0f8eb73d"
+	s := "cfa84733cabaca52f84e41475e88163e7211ff01dd18aaa85af41a576b14343e"
 
 	rBig := new(big.Int)
 	rBig.SetString(r, 16)
@@ -53,9 +54,11 @@ func TestRsHex(t *testing.T) {
 	sBig.SetString(s, 16)
 	fmt.Println("s:", common.Bytes2Hex(sBig.Bytes()))
 	x := new(big.Int)
-	x.SetString("f7d1a2b1dbed87f356ce9a65552fa88d017bde55f93e7cbbecf29f31a672b76f", 16)
+	//"x": "0c56c52d12cc437e8cb693efa16a768581fa3f96881f349af39ea4a5be19483f",
+	//			"y": "ed36822b8f1710035830afb801bdbb72fa98bd9b4c95383fe6cce3ab783ce519",
+	x.SetString("0c56c52d12cc437e8cb693efa16a768581fa3f96881f349af39ea4a5be19483f", 16)
 	y := new(big.Int)
-	y.SetString("7ae2cdf0f8b102593e92f6977fd3b7e2df43c7d66e48a3dc8a1f31e826357d10", 16)
+	y.SetString("ed36822b8f1710035830afb801bdbb72fa98bd9b4c95383fe6cce3ab783ce519", 16)
 
 	publicKey := ecdsa.PublicKey{
 		Curve: utils.GetCurve(),
@@ -67,7 +70,7 @@ func TestRsHex(t *testing.T) {
 	rs = append(rs, big.NewInt(28).Bytes()...)
 	fmt.Println("rs:", common.Bytes2Hex(rs))
 	fmt.Printf("%x \n", publicKey)
-	msg := "966d9640e00a1f3292b2c01495639903baefb4a46148fedbeef02a9b519f511c"
+	msg := "013eadf0078f80119df16210a27dffcede2ecf692d22ba2174bcdc2a64d69ccd"
 	status := ecdsa.Verify(&publicKey, common.Hex2Bytes(msg), rBig, sBig)
 	fmt.Println("signature valid:", status)
 	addressFromPubKey := crypto.PubkeyToAddress(publicKey)
