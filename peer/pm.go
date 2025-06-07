@@ -3,9 +3,10 @@ package peer
 import (
 	"context"
 	"fmt"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"sync"
 	"time"
+
+	"github.com/libp2p/go-libp2p/core/peer"
 
 	"github.com/getamis/sirius/log"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -49,7 +50,7 @@ func (p *P2PManager) PeerIDs() []string {
 	ids := make([]string, len(p.peers))
 	i := 0
 	for id := range p.peers {
-		fmt.Println("p.peers:", id)
+		log.Debug("Peer ID", "id", id)
 		ids[i] = id
 		i++
 	}

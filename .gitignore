@@ -28,3 +28,4 @@ example/example
 *-output.yaml
 
 cmd/tss
+tmp/

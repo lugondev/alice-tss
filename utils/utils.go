@@ -4,12 +4,13 @@ import (
 	"alice-tss/types"
 	"crypto/ecdsa"
 	cryptoElliptic "crypto/elliptic"
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"math/rand"
+	mathrand "math/rand"
+	"os"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -83,19 +84,19 @@ func EthSignMessage(data []byte) []byte {
 }
 
 func GetPrivateKeyFromKeystore(keyFile, pass string) (*ecdsa.PrivateKey, error) {
-	keyJson, err := ioutil.ReadFile(keyFile)
+	keyJson, err := os.ReadFile(keyFile)
 	if err != nil {
-		fmt.Println("Read keystore fail", err)
+		log.Error("Failed to read keystore file", "file", keyFile, "error", err)
 		return nil, err
 	}
 
 	keyWrapper, err := keystore.DecryptKey(keyJson, pass)
 	if err != nil {
-		fmt.Println("Key decrypt error:", err)
+		log.Error("Failed to decrypt keystore", "error", err)
 		return nil, err
 	}
 
-	fmt.Printf("From address = %s\n", keyWrapper.Address.String())
+	log.Info("Loaded keystore", "address", keyWrapper.Address.String())
 
 	return keyWrapper.PrivateKey, nil
 }
@@ -136,8 +137,15 @@ func ToHexHash(b []byte) string {
 	return ToHex(crypto.Keccak256(b))
 }
 
+// RandomHash generates a cryptographically secure random hash using current time and crypto/rand.
 func RandomHash() string {
 	timeNow := time.Now()
-	rnd := rand.Intn(1000000)
-	return ToHexHash([]byte(fmt.Sprintf("%s%d", timeNow.String(), rnd)))
+	// Use crypto/rand for better security instead of math/rand
+	randBytes := make([]byte, 8)
+	if _, err := rand.Read(randBytes); err != nil {
+		// Fallback to time-based randomness if crypto/rand fails
+		rnd := mathrand.Intn(1000000)
+		return ToHexHash([]byte(fmt.Sprintf("%s%d", timeNow.String(), rnd)))
+	}
+	return ToHexHash(append([]byte(timeNow.String()), randBytes...))
 }

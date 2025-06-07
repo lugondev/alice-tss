@@ -5,6 +5,7 @@ import (
 	"alice-tss/store"
 	"alice-tss/types"
 	"flag"
+
 	"github.com/getamis/sirius/log"
 	gorpc "github.com/libp2p/go-libp2p-gorpc"
 	"github.com/spf13/viper"
@@ -19,6 +20,9 @@ var password string
 var port int
 var selfHost bool
 
+// main initializes and starts the TSS (Threshold Signature Scheme) service.
+// It sets up peer-to-peer networking, storage, and RPC servers for distributed
+// cryptographic operations including DKG, signing, and key resharing.
 func main() {
 	flag.Parse()
 
@@ -51,7 +55,17 @@ func main() {
 
 	var selfService *server.SelfService = nil
 	if selfHost {
-		selfService = server.NewSelfService()
+		selfService, err = server.NewSelfService()
+		if err != nil {
+			log.Crit("Failed to create self service", "err", err)
+		}
+		defer func() {
+			if selfService != nil {
+				if closeErr := selfService.Close(); closeErr != nil {
+					log.Error("Failed to close self service", "err", closeErr)
+				}
+			}
+		}()
 	} else {
 		// setup local mDNS discovery
 		if err := peer.SetupDiscovery(pm); err != nil {
@@ -79,23 +93,26 @@ func main() {
 func init() {
 	flag.StringVar(&configFile, "config", "", "config file name")
 	flag.StringVar(&keystoreFile, "keystore", "", "keystore file path")
-	flag.StringVar(&password, "password", "111111", "password")
+	flag.StringVar(&password, "password", "", "password for keystore file")
 	flag.IntVar(&port, "port", 0, "port server")
 	flag.BoolVar(&selfHost, "self-host", false, "run self host")
 }
 
+// readAppConfigFile reads and parses the application configuration file.
+// It returns the parsed configuration or an error if the file cannot be read or parsed.
 func readAppConfigFile() (*types.AppConfig, error) {
 	viper.SetConfigFile(configFile)
 	viper.AddConfigPath("./")
 
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Error("Cannot read configuration file", err)
-		panic(err)
+		log.Error("Cannot read configuration file", "error", err)
+		return nil, err
 	}
 	var c types.AppConfig
 	if err := viper.Unmarshal(&c); err != nil {
-		panic(err)
+		log.Error("Cannot unmarshal configuration", "error", err)
+		return nil, err
 	}
 	log.Info("config", "config", c)
 

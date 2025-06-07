@@ -5,10 +5,10 @@ import (
 	"alice-tss/peer"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"sync"
+
 	"github.com/getamis/sirius/log"
 	"github.com/golang/protobuf/proto"
-	"sync"
 )
 
 type TssRequest interface {
@@ -41,7 +41,7 @@ func RpcToPeer(pm *peer.P2PManager, svcName, svcMethod string, data []byte) func
 		for _, peerId := range pm.PeerIDs() {
 			wg.Add(1)
 			peerAddrTarget := pm.Peers()[peerId]
-			fmt.Println("send:", peerAddrTarget)
+			log.Debug("Sending message to peer", "target", peerAddrTarget)
 			peerReply, err := SendToPeer(pm.Host, PeerArgs{
 				peerAddrTarget,
 				svcName,
@@ -52,10 +52,10 @@ func RpcToPeer(pm *peer.P2PManager, svcName, svcMethod string, data []byte) func
 			}, &wg)
 
 			if err != nil {
-				fmt.Println("send err", err)
+				log.Error("Failed to send message to peer", "error", err)
 				return err
 			}
-			fmt.Println("reply:", peerReply)
+			log.Debug("Received reply from peer", "reply", peerReply)
 		}
 
 		wg.Wait()

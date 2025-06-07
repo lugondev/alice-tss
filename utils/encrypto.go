@@ -4,6 +4,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
+
 	"github.com/getamis/sirius/log"
 )
 
@@ -14,7 +15,8 @@ func B64Encode(b []byte) string {
 func B64Decode(s string) []byte {
 	data, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
-		panic(err)
+		log.Error("Failed to decode base64 string", "error", err)
+		return nil
 	}
 	return data
 }

@@ -7,7 +7,6 @@ import (
 	"alice-tss/types"
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -99,17 +98,17 @@ func (t *TssPeerService) RegisterDKG(_ context.Context, argType PingArgs, _ *Pin
 func MsgToPeer(client host.Host, data PeerArgs) (*PingReply, error) {
 	ma, err := multiaddr.NewMultiaddr(data.PeerAddrTarget)
 	if err != nil {
-		fmt.Println("New Multi addr:", err)
+		log.Error("Failed to create multiaddr", "error", err)
 		return nil, err
 	}
 	peerInfo, err := libp2pPeer.AddrInfoFromP2pAddr(ma)
 	if err != nil {
-		fmt.Println("Addr Info From P2p Addr:", err)
+		log.Error("Failed to get addr info from p2p addr", "error", err)
 		return nil, err
 	}
 	err = client.Connect(context.Background(), *peerInfo)
 	if err != nil {
-		fmt.Println("Connect to peer err:", err)
+		log.Error("Failed to connect to peer", "error", err)
 		return nil, err
 	}
 
@@ -118,7 +117,7 @@ func MsgToPeer(client host.Host, data PeerArgs) (*PingReply, error) {
 	var reply PingReply
 	err = rpcClient.Call(peerInfo.ID, data.SvcName, data.SvcMethod, data.Args, &reply)
 	if err != nil {
-		fmt.Println("Cannot call to peer:", err)
+		log.Error("Failed to call peer", "error", err)
 		return nil, err
 	}
 	return &reply, nil

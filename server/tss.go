@@ -12,10 +12,13 @@ import (
 	"github.com/getamis/sirius/log"
 )
 
+// TssCaller handles TSS (Threshold Signature Scheme) operations including
+// DKG, signing, and resharing across peer-to-peer networks.
 type TssCaller struct {
 	StoreDB store.HandlerData
 }
 
+// SignMessage performs threshold signature generation for a given message using ECDSA.
 func (t *TssCaller) SignMessage(pm *peer.P2PManager, signRequest *pb.SignRequest, call2peer func() error) (*signer.Result, error) {
 	log.Info("SignMessage", "hash", signRequest.Hash, "pubkey", signRequest.Pubkey)
 
@@ -43,6 +46,7 @@ func (t *TssCaller) SignMessage(pm *peer.P2PManager, signRequest *pb.SignRequest
 	return nil, nil
 }
 
+// GetSignerConfig retrieves the signer configuration for a given hash and public key.
 func (t *TssCaller) GetSignerConfig(signRequest *pb.SignRequest) (*types.SignerConfig, error) {
 	signerCfg, err := t.StoreDB.GetSignerConfig(signRequest.Hash, signRequest.Pubkey)
 	if err != nil {
@@ -53,6 +57,7 @@ func (t *TssCaller) GetSignerConfig(signRequest *pb.SignRequest) (*types.SignerC
 	return signerCfg, nil
 }
 
+// Reshare initiates a key resharing process to refresh threshold shares while maintaining the same public key.
 func (t *TssCaller) Reshare(pm *peer.P2PManager, reshareRequest *pb.ReshareRequest, call2peer func() error) error {
 	signerCfg, err := t.StoreDB.GetSignerConfig(reshareRequest.Hash, reshareRequest.Pubkey)
 	if err != nil {
@@ -83,6 +88,7 @@ func (t *TssCaller) Reshare(pm *peer.P2PManager, reshareRequest *pb.ReshareReque
 	return nil
 }
 
+// RegisterDKG initiates a Distributed Key Generation process to create shared public/private key pairs.
 func (t *TssCaller) RegisterDKG(pm *peer.P2PManager, hash string, call2peer func() error) (*dkg.Result, error) {
 	cfg := &types.DKGConfig{
 		Rank:      0,

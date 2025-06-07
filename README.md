@@ -1,28 +1,33 @@
-# TSS example
-Base on the [Alice](https://github.com/getamis/alice)
+# Alice TSS Example
 
-This program demonstrates a simple TSS by using [go-libp2p](https://github.com/libp2p/go-libp2p). It contains 3 main functions which are
+Based on the [Alice](https://github.com/getamis/alice) library, this program demonstrates a Threshold Signature Scheme (TSS) implementation using [go-libp2p](https://github.com/libp2p/go-libp2p) for peer-to-peer networking.
+
+The system provides three main TSS operations:
 
 1. `dkg`: generate shares
 2. `signer`: sign a message
 3. `reshare`: refresh shares
 
 ## Configuration
-### Common
 
-Beyond all commands, there are some common inputs.
+All nodes require a configuration file with the following structure:
 
-config.yaml
+**config.yml**
 ```yaml
 port: 10001
 rpc: 1234
 
-badger-dir: "./node.test/badger1"
+store:
+  type: "badger"
+  path: "./node.test/badger1"
 ```
 
-1. `port`: Port that this node will listen for.
-2. `rpc`: Port that this RPC server is exposed.
-3. `badger-dir`: Directory that badger database is stored.
+### Configuration Parameters
+
+1. `port`: P2P networking port that this node will listen on
+2. `rpc`: HTTP port that the JSON-RPC server is exposed on
+3. `store.type`: Database type (currently supports "badger" and "mock")
+4. `store.path`: Directory path where the Badger database files are stored
 
 ### DKG
 #### Request
@@ -231,47 +236,89 @@ After reshare, the value of new share is rotated and different with the old one 
 
 ## Build
 
-At project root directory
+To build the TSS binary, run the following command in the project root directory:
+
 ```shell
 make tss
 ```
 
+This will create an executable at `./cmd/tss`.
+
+### Prerequisites
+
+- Go 1.19 or later
+- Make sure to initialize git submodules if this is a fresh clone:
+  ```shell
+  make init
+  ```
+
 ## Usage
 
-After the binary was built, open three terminals.
+After building the binary, you need to start multiple nodes to participate in the TSS protocol. Here's how to set up a 3-node cluster:
 
-On node A,
-id-10001-input.yaml
+### Node Setup
+
+Each node requires:
+- A unique configuration file
+- A keystore file for the node's identity
+- A password for the keystore (can be provided via flag or prompt)
+
+### Starting the Nodes
+
+**Node A** (using provided config):
 ```yaml
+# config/id-10001-input.yml
 port: 10001
 rpc: 1234
 
-badger-dir: "./node.test/badger1"
+store:
+  type: "badger"
+  path: "./node.test/badger1"
 ```
-```sh
-> ./cmd/tss start --config ./cmd/id-10001-input.yml --keystore ./node.test/keystore/1
+```shell
+./cmd/tss --config ./config/id-10001-input.yml --keystore ./node.test/keystore/1 --password <password>
 ```
 
-On node B,
-id-10002-input.yaml
+**Node B** (using provided config):
 ```yaml
+# config/id-10002-input.yml
 port: 10002
 rpc: 1235
 
-badger-dir: "./node.test/badger2"
+store:
+  type: "badger"
+  path: "./node.test/badger2"
 ```
-```sh
-> ./cmd/tss start --config ./cmd/id-10002-input.yml --keystore ./node.test/keystore/2
+```shell
+./cmd/tss --config ./config/id-10002-input.yml --keystore ./node.test/keystore/2 --password <password>
 ```
 
-On node C,
-id-10003-input.yaml
+**Node C** (using provided config):
 ```yaml
+# config/id-10003-input.yml
 port: 10003
 rpc: 1236
 
-badger-dir: "./node.test/badger3"
+store:
+  type: "badger"
+  path: "./node.test/badger3"
 ```
-```sh
-> ./cmd/tss start --config ./cmd/id-10003-input.yml --keystore ./node.test/keystore/3
+```shell
+./cmd/tss --config ./config/id-10003-input.yml --keystore ./node.test/keystore/3 --password <password>
 ```
+
+### Command Line Options
+
+- `--config`: Path to the configuration file
+- `--keystore`: Path to the keystore file for node identity
+- `--password`: Password for the keystore file
+- `--port`: Override the RPC port from config
+- `--self-host`: Run in self-hosted mode (disables mDNS discovery)
+
+### Network Discovery
+
+The nodes use mDNS (multicast DNS) for automatic peer discovery on the local network. Make sure all nodes are running on the same network segment for automatic discovery to work.
+
+## Creating Keystore Files
+
+Before starting nodes, you need to create keystore files for each node's identity. You can create these using standard Ethereum keystore tools or generate them programmatically using the project's utilities.
